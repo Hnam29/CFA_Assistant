@@ -235,6 +235,14 @@ elif st.session_state.exam_started and not st.session_state.exam_submitted:
             </div>""",
             unsafe_allow_html=True,
         )
+        # Hidden auto-submit button to avoid page reload on timeout
+        st.markdown('<div style="position:absolute; left:-9999px; opacity:0; height:0; width:0; overflow:hidden;">', unsafe_allow_html=True)
+        if st.button("Auto Submit", key="exam_auto_submit_trigger"):
+            st.session_state.exam_submitted = True
+            st.session_state.exam_confirm_submit = False
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+
         # Live JS countdown — updates every second without a Python rerun
         import streamlit.components.v1 as components
         components.html(
@@ -253,6 +261,16 @@ elif st.session_state.exam_started and not st.session_state.exam_submitted:
       }}
     }} catch(e) {{}}
     if (rem <= 0) {{
+      try {{
+        var btns = window.parent.document.querySelectorAll('button');
+        for (var i = 0; i < btns.length; i++) {{
+          if (btns[i].textContent.trim() === 'Auto Submit') {{
+            btns[i].click();
+            return;
+          }}
+        }}
+      }} catch(e) {{}}
+      // Fallback if click fails
       window.parent.location.reload();
       return;
     }}
