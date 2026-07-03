@@ -1,0 +1,447 @@
+/* assets/styles.css — Global dark theme for CFA Learning Assistant */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+/* ── CSS Variables ───────────────────────────────────────────── */
+:root {
+    --bg-primary:    #0f172a;
+    --bg-secondary:  #1e293b;
+    --bg-card:       #1e293b;
+    --bg-input:      #0f172a;
+    --border:        #334155;
+    --border-hover:  #475569;
+
+    --text-primary:  #f1f5f9;
+    --text-secondary:#94a3b8;
+    --text-muted:    #64748b;
+
+    --accent:        #6366f1;
+    --accent-light:  #818cf8;
+    --accent-glow:   rgba(99,102,241,0.25);
+    --cyan:          #06b6d4;
+    --green:         #10b981;
+    --amber:         #f59e0b;
+    --red:           #ef4444;
+
+    --radius:        12px;
+    --radius-lg:     18px;
+    --shadow:        0 4px 24px rgba(0,0,0,0.4);
+    --transition:    0.2s ease;
+}
+
+/* ── Base ────────────────────────────────────────────────────── */
+.stApp {
+    background: var(--bg-primary) !important;
+    font-family: 'Inter', sans-serif !important;
+    color: var(--text-primary) !important;
+}
+
+/* ── Sidebar ─────────────────────────────────────────────────── */
+[data-testid="stSidebar"] {
+    background: var(--bg-secondary) !important;
+    border-right: 1px solid var(--border) !important;
+}
+
+[data-testid="stSidebar"] .stMarkdown p,
+[data-testid="stSidebar"] label,
+[data-testid="stSidebar"] span {
+    color: var(--text-secondary) !important;
+}
+
+/* ── Cards ───────────────────────────────────────────────────── */
+.cfa-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.cfa-card:hover {
+    border-color: var(--border-hover);
+    box-shadow: var(--shadow);
+}
+
+.cfa-card-accent {
+    border-left: 3px solid var(--accent);
+}
+
+/* ── Metric cards ────────────────────────────────────────────── */
+.metric-card {
+    background: linear-gradient(135deg, var(--bg-secondary), #162032);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.2rem 1.5rem;
+    text-align: center;
+}
+
+.metric-value {
+    font-size: 2rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--accent-light), var(--cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    line-height: 1;
+}
+
+.metric-label {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-top: 0.4rem;
+}
+
+/* ── Buttons ─────────────────────────────────────────────────── */
+.stButton > button {
+    background: linear-gradient(135deg, var(--accent), #4f46e5) !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 10px !important;
+    font-weight: 600 !important;
+    font-family: 'Inter', sans-serif !important;
+    transition: all var(--transition) !important;
+    box-shadow: 0 2px 12px var(--accent-glow) !important;
+}
+
+.stButton > button:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 6px 20px var(--accent-glow) !important;
+}
+
+/* Secondary buttons */
+.stButton > button[kind="secondary"] {
+    background: var(--bg-secondary) !important;
+    border: 1px solid var(--border) !important;
+    color: var(--text-primary) !important;
+    box-shadow: none !important;
+}
+
+/* ── Inputs ──────────────────────────────────────────────────── */
+.stTextInput > div > div > input,
+.stTextArea > div > div > textarea,
+.stSelectbox > div > div,
+.stMultiSelect > div > div {
+    background: var(--bg-secondary) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 10px !important;
+    color: var(--text-primary) !important;
+    font-family: 'Inter', sans-serif !important;
+}
+
+.stTextInput > div > div > input:focus,
+.stTextArea > div > div > textarea:focus {
+    border-color: var(--accent) !important;
+    box-shadow: 0 0 0 2px var(--accent-glow) !important;
+}
+
+/* ── Tabs ────────────────────────────────────────────────────── */
+.stTabs [data-baseweb="tab-list"] {
+    background: var(--bg-secondary) !important;
+    border-radius: var(--radius) !important;
+    padding: 4px !important;
+    gap: 4px !important;
+}
+
+.stTabs [data-baseweb="tab"] {
+    border-radius: 8px !important;
+    color: var(--text-secondary) !important;
+    font-weight: 500 !important;
+}
+
+.stTabs [aria-selected="true"] {
+    background: var(--accent) !important;
+    color: white !important;
+}
+
+/* ── Progress bars ───────────────────────────────────────────── */
+.stProgress > div > div {
+    background: var(--bg-secondary) !important;
+    border-radius: 999px !important;
+}
+
+.stProgress > div > div > div {
+    background: linear-gradient(90deg, var(--accent), var(--cyan)) !important;
+    border-radius: 999px !important;
+}
+
+/* ── Chat messages ───────────────────────────────────────────── */
+.chat-message {
+    padding: 1rem 1.2rem;
+    border-radius: var(--radius);
+    margin-bottom: 0.75rem;
+    line-height: 1.6;
+}
+
+.chat-user {
+    background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(99,102,241,0.08));
+    border: 1px solid rgba(99,102,241,0.25);
+    margin-left: 2rem;
+}
+
+.chat-assistant {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    margin-right: 2rem;
+}
+
+/* ── Badges ──────────────────────────────────────────────────── */
+.badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.badge-high   { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+.badge-medium { background: rgba(245,158,11,0.15); color: #fbbf24; border: 1px solid rgba(245,158,11,0.3); }
+.badge-low    { background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3); }
+
+/* ── Scrollbar ───────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg-primary); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
+
+/* ── Divider ─────────────────────────────────────────────────── */
+hr { border-color: var(--border) !important; margin: 1.5rem 0 !important; }
+
+/* ── Section headers ─────────────────────────────────────────── */
+.section-header {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* ── Alerts / info boxes ─────────────────────────────────────── */
+.stAlert {
+    background: var(--bg-secondary) !important;
+    border-radius: var(--radius) !important;
+}
+
+/* ── Success / error states ──────────────────────────────────── */
+.answer-correct {
+    background: rgba(16,185,129,0.12);
+    border: 1px solid rgba(16,185,129,0.3);
+    border-radius: var(--radius);
+    padding: 1rem;
+    margin-top: 0.5rem;
+}
+
+.answer-wrong {
+    background: rgba(239,68,68,0.1);
+    border: 1px solid rgba(239,68,68,0.25);
+    border-radius: var(--radius);
+    padding: 1rem;
+    margin-top: 0.5rem;
+}
+
+/* ── Timer ───────────────────────────────────────────────────── */
+.timer-display {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--cyan);
+    text-align: center;
+}
+
+.timer-warning { color: var(--amber) !important; }
+.timer-danger  { color: var(--red) !important; }
+
+/* ── CFA CBT Real Exam Interface Simulation ──────────────────── */
+.cbt-window {
+    background: #ffffff;
+    border: 3px solid #cbd5e1;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    overflow: hidden;
+    margin-bottom: 2rem;
+    color: #1e293b;
+}
+
+.cbt-top-bar {
+    background: #334155;
+    color: #f8fafc;
+    padding: 0.6rem 1.2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.95rem;
+}
+
+.cbt-top-bar strong {
+    color: #ffffff;
+}
+
+.cbt-subbar {
+    background: #8cc63f;
+    color: #ffffff;
+    padding: 0.3rem 1.2rem;
+    font-weight: 700;
+    font-size: 0.85rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.cbt-body {
+    padding: 1.5rem;
+    background: #ffffff;
+}
+
+.cbt-stem-box {
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 1.5rem 1.8rem;
+    font-size: 1.15rem;
+    line-height: 1.6;
+    color: #0f172a;
+    font-weight: 500;
+    margin-bottom: 1.5rem;
+}
+
+.cbt-option-card {
+    background: #ffffff;
+    border: 2px solid #94a3b8;
+    border-radius: 6px;
+    padding: 1rem 1.2rem;
+    margin-bottom: 0.9rem;
+    font-size: 1.05rem;
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: all 0.2s;
+}
+
+.cbt-option-card:hover {
+    border-color: #475569;
+    background: #f8fafc;
+}
+
+.cbt-option-card.selected {
+    border-color: #334155;
+    background: #f1f5f9;
+    box-shadow: inset 0 0 0 1px #334155;
+}
+
+.cbt-option-letter {
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: #0f172a;
+    width: 24px;
+}
+
+.cbt-footer-bar {
+    background: #334155;
+    color: #f8fafc;
+    padding: 0.6rem 1.2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.cbt-palette-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 0.5rem 0;
+    margin-bottom: 0.4rem;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    border: none;
+    cursor: pointer;
+}
+
+.cbt-palette-active {
+    background: #475569 !important;
+    color: #ffffff !important;
+    position: relative;
+    box-shadow: 0 0 0 2px #0f172a;
+}
+
+.cbt-palette-answered {
+    background: #8cc63f !important;
+    color: #ffffff !important;
+}
+
+.cbt-palette-unanswered {
+    background: #a3e635 !important;
+    color: #1a2e05 !important;
+}
+
+.cbt-palette-flagged {
+    border: 2px solid #ef4444 !important;
+}
+
+/* ── Custom Navigation & Language Hover overrides ────────────────── */
+
+/* 1. Language buttons hover color */
+div[data-testid="column"] button:hover {
+    transition: all 0.2s ease !important;
+}
+
+/* Match only the language buttons inside navigation right and sidebar */
+div[data-testid="column"] div[data-testid="column"]:nth-child(1) button:hover,
+div[data-testid="column"] div[data-testid="column"]:nth-child(2) button:hover,
+section[data-testid="stSidebar"] [data-testid="column"]:nth-child(1) button:hover,
+section[data-testid="stSidebar"] [data-testid="column"]:nth-child(2) button:hover {
+    color: #d9bf9c !important;
+    border-color: #d9bf9c !important;
+    background: transparent !important;
+    transform: translateY(-1px) !important;
+}
+
+/* 2. Flat interactive logo button styling */
+div[data-testid="column"]:first-child button:has(span:contains("CFA Assistant")),
+div[data-testid="column"]:first-child button:has(p:contains("CFA Assistant")),
+button[key="logo_btn_home"] {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    transform: none !important;
+    cursor: pointer !important;
+    text-align: left !important;
+    height: auto !important;
+    min-height: 0 !important;
+}
+
+div[data-testid="column"]:first-child button:has(span:contains("CFA Assistant")) span,
+div[data-testid="column"]:first-child button:has(p:contains("CFA Assistant")) p,
+button[key="logo_btn_home"] span,
+button[key="logo_btn_home"] p {
+    font-size: 1.4rem !important;
+    font-weight: 800 !important;
+    background: linear-gradient(135deg,#6366f1,#06b6d4) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    color: transparent !important;
+}
+
+div[data-testid="column"]:first-child button:has(span:contains("CFA Assistant")):hover,
+button[key="logo_btn_home"]:hover {
+    opacity: 0.85 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+/* ── Landing Page Sidebar Hider (Eliminates Flash) ──────────────── */
+.stApp:has(.landing-page-indicator) [data-testid="stSidebar"] {
+    display: none !important;
+}
+.stApp:has(.landing-page-indicator) [data-testid="collapsedControl"] {
+    display: none !important;
+}
