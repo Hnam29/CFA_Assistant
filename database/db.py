@@ -12,20 +12,171 @@ DB_PATH = os.getenv("DATABASE_PATH", "./data/cfa_assistant.db")
 SCHEMA_PATH = Path(__file__).parent / "schema.sql"
 
 
-def get_connection() -> sqlite3.Connection:
-    """Return a sqlite3 connection with row_factory set."""
-    Path(DB_PATH).parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(DB_PATH, check_same_thread=False)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON")
-    return conn
+def is_postgres() -> bool:
+    """Return True if a PostgreSQL/Supabase database URL is configured."""
+    return bool(os.getenv("SUPABASE_DB_URL") or os.getenv("DATABASE_URL"))
+
+
+class UnifiedCursor:
+    """Wrapper around sqlite3.Cursor or psycopg2.cursor to unify placeholders and return dicts."""
+    def __init__(self, cursor, is_pg: bool):
+        self.cursor = cursor
+        self.is_pg = is_pg
+
+    def execute(self, query: str, params: tuple = ()) -> 'UnifiedCursor':
+        if self.is_pg:
+            # Convert SQLite '?' placeholders to PostgreSQL '%s'
+            query_pg = query.replace('?', '%s')
+            
+            # Translate specific dialect queries
+            if "INSERT OR IGNORE INTO curriculum_weights" in query_pg:
+                query_pg = query_pg.replace(
+                    "INSERT OR IGNORE INTO curriculum_weights (topic, weight) VALUES (%s, %s)",
+                    "INSERT INTO curriculum_weights (topic, weight) VALUES (%s, %s) ON CONFLICT (topic) DO NOTHING"
+                )
+            elif "INSERT OR REPLACE INTO user_profiles" in query_pg:
+                # user_profiles has user_id UNIQUE constraint
+                query_pg = (
+                    "INSERT INTO user_profiles (user_id, cfa_level, onboarding_done, phone) "
+                    "VALUES (%s, %s, 0, %s) ON CONFLICT (user_id) DO UPDATE SET "
+                    "cfa_level = EXCLUDED.cfa_level, phone = EXCLUDED.phone"
+                )
+
+            self.cursor.execute(query_pg, params)
+        else:
+            self.cursor.execute(query, params)
+        return self
+
+    def fetchone(self) -> Optional[Any]:
+        row = self.cursor.fetchone()
+        if row is None:
+            return None
+        if self.is_pg:
+            return dict(row)
+        return row
+
+    def fetchall(self) -> List[Any]:
+        rows = self.cursor.fetchall()
+        if self.is_pg:
+            return [dict(r) for r in rows]
+        return rows
+
+    @property
+    def lastrowid(self) -> Optional[int]:
+        if self.is_pg:
+            return None
+        return self.cursor.lastrowid
+
+
+class UnifiedConnection:
+    """Wrapper around sqlite3.Connection or psycopg2.connection."""
+    def __init__(self, conn, is_pg: bool):
+        self.conn = conn
+        self.is_pg = is_pg
+        self._active_cursor = None
+
+    def execute(self, query: str, params: tuple = ()) -> UnifiedCursor:
+        if self.is_pg:
+            import psycopg2.extras
+            if not self._active_cursor or self._active_cursor.closed:
+                self._active_cursor = self.conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            u_cur = UnifiedCursor(self._active_cursor, True)
+            u_cur.execute(query, params)
+            return u_cur
+        else:
+            cursor = self.conn.execute(query, params)
+            return UnifiedCursor(cursor, False)
+
+    def cursor(self):
+        if self.is_pg:
+            import psycopg2.extras
+            return self.conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        else:
+            return self.conn.cursor()
+
+    def commit(self):
+        self.conn.commit()
+
+    def rollback(self):
+        self.conn.rollback()
+
+    def close(self):
+        self.conn.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type is not None:
+            self.conn.rollback()
+        else:
+            self.conn.commit()
+        if self.is_pg and self._active_cursor and not self._active_cursor.closed:
+            self._active_cursor.close()
+        self.conn.close()
+
+
+def get_connection() -> UnifiedConnection:
+    """Return a UnifiedConnection wrapper for either PostgreSQL or SQLite."""
+    if is_postgres():
+        try:
+            import psycopg2
+            import psycopg2.extras
+        except ImportError:
+            raise ImportError(
+                "PostgreSQL connection URL is configured, but 'psycopg2' is not installed. "
+                "Please run: pip install psycopg2-binary"
+            )
+        url = os.getenv("SUPABASE_DB_URL") or os.getenv("DATABASE_URL")
+        # Handle sslmode for supabase poolers if necessary
+        conn = psycopg2.connect(url)
+        return UnifiedConnection(conn, True)
+    else:
+        Path(DB_PATH).parent.mkdir(parents=True, exist_ok=True)
+        conn = sqlite3.connect(DB_PATH, check_same_thread=False)
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys = ON")
+        return UnifiedConnection(conn, False)
+
 
 
 def init_db() -> None:
     """Create all tables and apply any pending migrations."""
+    if is_postgres():
+        schema_path = Path(__file__).parent / "schema_pg.sql"
+        schema = schema_path.read_text()
+        with get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(schema)
+
+        # Seed default weights in PostgreSQL
+        with get_connection() as conn:
+            row = conn.execute("SELECT COUNT(*) as total FROM curriculum_weights").fetchone()
+            count = row["total"] if row else 0
+            if count == 0:
+                TOPIC_WEIGHTS = {
+                    "Ethical and Professional Standards": 17.5,
+                    "Quantitative Methods": 9.0,
+                    "Economics": 9.0,
+                    "Financial Statement Analysis": 12.5,
+                    "Corporate Finance": 9.0,
+                    "Equities": 11.5,
+                    "Fixed Income": 11.5,
+                    "Derivatives": 6.5,
+                    "Alternative Investments": 6.5,
+                    "Portfolio Construction": 6.5
+                }
+                for topic, weight in TOPIC_WEIGHTS.items():
+                    conn.execute(
+                        "INSERT INTO curriculum_weights (topic, weight) VALUES (?, ?) ON CONFLICT (topic) DO NOTHING",
+                        (topic, weight)
+                    )
+        return
+
+    # Local SQLite Initialization
     with get_connection() as conn:
         schema = SCHEMA_PATH.read_text()
-        conn.executescript(schema)
+        conn.conn.executescript(schema)
 
         # ── Column migrations ────────────────────────────────────────────────
         # Add source column to questions if missing (legacy migration)
@@ -60,7 +211,8 @@ def init_db() -> None:
 
         # Seed curriculum weights if empty
         try:
-            count = conn.execute("SELECT COUNT(*) FROM curriculum_weights").fetchone()[0]
+            row = conn.execute("SELECT COUNT(*) as total FROM curriculum_weights").fetchone()
+            count = row["total"] if row else 0
             if count == 0:
                 TOPIC_WEIGHTS = {
                     "Ethical and Professional Standards": 17.5,
@@ -101,11 +253,18 @@ def init_db() -> None:
 def create_user(username: str, hashed_password: str, email: str = "", cfa_level: int = 1, phone: str = "") -> Optional[int]:
     try:
         with get_connection() as conn:
-            cur = conn.execute(
-                "INSERT INTO users (username, password, email, phone) VALUES (?, ?, ?, ?)",
-                (username, hashed_password, email, phone),
-            )
-            user_id = cur.lastrowid
+            if is_postgres():
+                row = conn.execute(
+                    "INSERT INTO users (username, password, email, phone) VALUES (?, ?, ?, ?) RETURNING id",
+                    (username, hashed_password, email, phone),
+                ).fetchone()
+                user_id = row["id"] if row else None
+            else:
+                cur = conn.execute(
+                    "INSERT INTO users (username, password, email, phone) VALUES (?, ?, ?, ?)",
+                    (username, hashed_password, email, phone),
+                )
+                user_id = cur.lastrowid
             
             # Initialize profile with cfa_level in user_profiles
             conn.execute(
@@ -113,8 +272,10 @@ def create_user(username: str, hashed_password: str, email: str = "", cfa_level:
                 (user_id, cfa_level, phone),
             )
             return user_id
-    except sqlite3.IntegrityError:
-        return None
+    except Exception as e:
+        if "IntegrityError" in type(e).__name__:
+            return None
+        raise e
 
 
 def get_user_by_username(username: str) -> Optional[Dict]:
@@ -133,11 +294,18 @@ def get_user_by_id(user_id: int) -> Optional[Dict]:
 
 def create_session(user_id: int, topic: str, session_type: str) -> int:
     with get_connection() as conn:
-        cur = conn.execute(
-            "INSERT INTO study_sessions (user_id, topic, session_type) VALUES (?, ?, ?)",
-            (user_id, topic, session_type),
-        )
-        return cur.lastrowid
+        if is_postgres():
+            row = conn.execute(
+                "INSERT INTO study_sessions (user_id, topic, session_type) VALUES (?, ?, ?) RETURNING id",
+                (user_id, topic, session_type),
+            ).fetchone()
+            return row["id"] if row else None
+        else:
+            cur = conn.execute(
+                "INSERT INTO study_sessions (user_id, topic, session_type) VALUES (?, ?, ?)",
+                (user_id, topic, session_type),
+            )
+            return cur.lastrowid
 
 
 def complete_session(session_id: int, score: float, total_q: int, correct_q: int, duration_mins: float) -> None:
@@ -196,13 +364,22 @@ def save_question(topic: str, subtopic: str, difficulty: str, question_text: str
                   option_a: str, option_b: str, option_c: str,
                   correct_answer: str, explanation: str, source: str = 'ai') -> int:
     with get_connection() as conn:
-        cur = conn.execute(
-            """INSERT INTO questions
-               (topic, subtopic, difficulty, question_text, option_a, option_b, option_c, correct_answer, explanation, source)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (topic, subtopic, difficulty, question_text, option_a, option_b, option_c, correct_answer, explanation, source),
-        )
-        return cur.lastrowid
+        if is_postgres():
+            row = conn.execute(
+                """INSERT INTO questions
+                   (topic, subtopic, difficulty, question_text, option_a, option_b, option_c, correct_answer, explanation, source)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id""",
+                (topic, subtopic, difficulty, question_text, option_a, option_b, option_c, correct_answer, explanation, source),
+            ).fetchone()
+            return row["id"] if row else None
+        else:
+            cur = conn.execute(
+                """INSERT INTO questions
+                   (topic, subtopic, difficulty, question_text, option_a, option_b, option_c, correct_answer, explanation, source)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (topic, subtopic, difficulty, question_text, option_a, option_b, option_c, correct_answer, explanation, source),
+            )
+            return cur.lastrowid
 
 
 def get_question(question_id: int) -> Optional[Dict]:
@@ -328,12 +505,20 @@ def mark_session_done(session_id: int, completed_session_id: Optional[int] = Non
 
 def add_manual_session(user_id: int, scheduled_date: str, topic: str, session_type: str, priority: str, reason: str) -> int:
     with get_connection() as conn:
-        cur = conn.execute(
-            """INSERT INTO scheduled_sessions (user_id, scheduled_date, topic, session_type, priority, reason, creator)
-               VALUES (?, ?, ?, ?, ?, ?, 'user')""",
-            (user_id, scheduled_date, topic, session_type, priority, reason),
-        )
-        return cur.lastrowid
+        if is_postgres():
+            row = conn.execute(
+                """INSERT INTO scheduled_sessions (user_id, scheduled_date, topic, session_type, priority, reason, creator)
+                   VALUES (?, ?, ?, ?, ?, ?, 'user') RETURNING id""",
+                (user_id, scheduled_date, topic, session_type, priority, reason),
+            ).fetchone()
+            return row["id"] if row else None
+        else:
+            cur = conn.execute(
+                """INSERT INTO scheduled_sessions (user_id, scheduled_date, topic, session_type, priority, reason, creator)
+                   VALUES (?, ?, ?, ?, ?, ?, 'user')""",
+                (user_id, scheduled_date, topic, session_type, priority, reason),
+            )
+            return cur.lastrowid
 
 
 def delete_scheduled_session(session_id: int) -> None:
