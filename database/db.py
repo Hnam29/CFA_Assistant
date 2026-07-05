@@ -70,9 +70,10 @@ class UnifiedCursor:
 
 class UnifiedConnection:
     """Wrapper around sqlite3.Connection or psycopg2.connection."""
-    def __init__(self, conn, is_pg: bool):
+    def __init__(self, conn, is_pg: bool, pool=None):
         self.conn = conn
         self.is_pg = is_pg
+        self.pool = pool
         self._active_cursor = None
 
     def execute(self, query: str, params: tuple = ()) -> UnifiedCursor:
@@ -101,19 +102,50 @@ class UnifiedConnection:
         self.conn.rollback()
 
     def close(self):
-        self.conn.close()
+        if self.is_pg:
+            if self.pool:
+                self.pool.putconn(self.conn)
+            else:
+                self.conn.close()
+        else:
+            self.conn.close()
 
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if exc_type is not None:
-            self.conn.rollback()
-        else:
-            self.conn.commit()
+        try:
+            if exc_type is not None:
+                self.conn.rollback()
+            else:
+                self.conn.commit()
+        except Exception:
+            pass
         if self.is_pg and self._active_cursor and not self._active_cursor.closed:
             self._active_cursor.close()
-        self.conn.close()
+        self.close()
+
+
+_local_pool = None
+
+def get_postgres_pool(url: str):
+    """Get or create a cached connection pool for PostgreSQL."""
+    try:
+        import streamlit as st
+        if st.runtime.exists():
+            @st.cache_resource
+            def _get_cached_pool(connection_url: str):
+                import psycopg2.pool
+                return psycopg2.pool.ThreadedConnectionPool(1, 20, connection_url)
+            return _get_cached_pool(url)
+    except Exception:
+        pass
+
+    global _local_pool
+    if _local_pool is None:
+        import psycopg2.pool
+        _local_pool = psycopg2.pool.ThreadedConnectionPool(1, 5, url)
+    return _local_pool
 
 
 def get_connection() -> UnifiedConnection:
@@ -122,15 +154,16 @@ def get_connection() -> UnifiedConnection:
         try:
             import psycopg2
             import psycopg2.extras
+            import psycopg2.pool
         except ImportError:
             raise ImportError(
                 "PostgreSQL connection URL is configured, but 'psycopg2' is not installed. "
                 "Please run: pip install psycopg2-binary"
             )
         url = os.getenv("SUPABASE_DB_URL") or os.getenv("DATABASE_URL")
-        # Handle sslmode for supabase poolers if necessary
-        conn = psycopg2.connect(url)
-        return UnifiedConnection(conn, True)
+        pool = get_postgres_pool(url)
+        conn = pool.getconn()
+        return UnifiedConnection(conn, True, pool)
     else:
         Path(DB_PATH).parent.mkdir(parents=True, exist_ok=True)
         conn = sqlite3.connect(DB_PATH, check_same_thread=False)
