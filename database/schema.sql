@@ -67,6 +67,7 @@ CREATE TABLE IF NOT EXISTS scheduled_sessions (
     user_id              INTEGER NOT NULL,
     scheduled_date       DATE    NOT NULL,
     topic                TEXT    NOT NULL,
+    subtopic             TEXT,
     session_type         TEXT    NOT NULL,
     reason               TEXT,
     priority             TEXT DEFAULT 'medium',  -- 'high' | 'medium' | 'low'

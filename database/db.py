@@ -242,6 +242,12 @@ def init_db() -> None:
         except sqlite3.OperationalError:
             pass
 
+        # Add subtopic column to scheduled_sessions if missing
+        try:
+            conn.execute("ALTER TABLE scheduled_sessions ADD COLUMN subtopic TEXT")
+        except sqlite3.OperationalError:
+            pass
+
         # Seed curriculum weights if empty
         try:
             row = conn.execute("SELECT COUNT(*) as total FROM curriculum_weights").fetchone()
@@ -282,6 +288,69 @@ def init_db() -> None:
 
 
 # ── User helpers ────────────────────────────────────────────────
+
+def get_all_users() -> List[Dict]:
+    """Admin: Return all registered users with their profile data."""
+    with get_connection() as conn:
+        rows = conn.execute(
+            """SELECT u.id, u.username, u.email, u.phone, u.created_at,
+                      p.full_name, p.cfa_level, p.exam_window, p.exam_year,
+                      p.city, p.onboarding_done, p.subscription_plan
+               FROM users u
+               LEFT JOIN user_profiles p ON p.user_id = u.id
+               ORDER BY u.created_at DESC"""
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
+def get_user_summary_stats(user_id: int) -> Dict:
+    """Admin: Return aggregate session statistics for a given user."""
+    with get_connection() as conn:
+        session_row = conn.execute(
+            """SELECT COUNT(*) as total_sessions,
+                      AVG(score) as avg_score,
+                      SUM(correct_q) as total_correct,
+                      SUM(total_q) as total_questions
+               FROM study_sessions WHERE user_id=? AND completed=1""",
+            (user_id,)
+        ).fetchone()
+        chat_row = conn.execute(
+            "SELECT COUNT(*) as total_chats FROM chat_history WHERE user_id=?",
+            (user_id,)
+        ).fetchone()
+        weak_row = conn.execute(
+            """SELECT topic, avg_score FROM topic_performance
+               WHERE user_id=? ORDER BY avg_score ASC LIMIT 3""",
+            (user_id,)
+        ).fetchall()
+        return {
+            "total_sessions": (session_row or {}).get("total_sessions") or 0,
+            "avg_score": (session_row or {}).get("avg_score") or 0,
+            "total_correct": (session_row or {}).get("total_correct") or 0,
+            "total_questions": (session_row or {}).get("total_questions") or 0,
+            "total_chats": (chat_row or {}).get("total_chats") or 0,
+            "weak_topics": [dict(r) for r in (weak_row or [])],
+        }
+
+
+def get_all_scheduled_sessions_by_status(user_id: int) -> Dict[str, List[Dict]]:
+    """Return all scheduled sessions for a user grouped by status."""
+    with get_connection() as conn:
+        rows = conn.execute(
+            """SELECT * FROM scheduled_sessions WHERE user_id=?
+               ORDER BY scheduled_date ASC""",
+            (user_id,)
+        ).fetchall()
+    result = {"pending": [], "done": [], "skipped": []}
+    for r in rows:
+        d = dict(r)
+        status = d.get("status", "pending")
+        if status in result:
+            result[status].append(d)
+        else:
+            result["pending"].append(d)
+    return result
+
 
 def create_user(username: str, hashed_password: str, email: str = "", cfa_level: int = 1, phone: str = "") -> Optional[int]:
     try:
@@ -508,9 +577,9 @@ def save_scheduled_sessions(user_id: int, sessions: List[Dict], creator: str = "
         conn.execute("DELETE FROM scheduled_sessions WHERE user_id=? AND status='pending' AND creator=?", (user_id, creator))
         for s in sessions:
             conn.execute(
-                """INSERT INTO scheduled_sessions (user_id, scheduled_date, topic, session_type, reason, priority, creator)
-                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
-                (user_id, s["date"], s["topic"], s["session_type"], s.get("reason", ""), s.get("priority", "medium"), creator),
+                """INSERT INTO scheduled_sessions (user_id, scheduled_date, topic, subtopic, session_type, reason, priority, creator)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                (user_id, s["date"], s["topic"], s.get("subtopic", ""), s["session_type"], s.get("reason", ""), s.get("priority", "medium"), creator),
             )
 
 
