@@ -190,6 +190,22 @@ def init_db() -> None:
             with conn.cursor() as cur:
                 cur.execute(schema)
 
+        # Apply column migrations for PostgreSQL (ADD COLUMN IF NOT EXISTS is safe to re-run)
+        _pg_migrations = [
+            "ALTER TABLE study_sessions ADD COLUMN IF NOT EXISTS session_state TEXT",
+            "ALTER TABLE questions ADD COLUMN IF NOT EXISTS source VARCHAR(50) DEFAULT 'ai'",
+            "ALTER TABLE scheduled_sessions ADD COLUMN IF NOT EXISTS creator VARCHAR(50) DEFAULT 'system'",
+            "ALTER TABLE scheduled_sessions ADD COLUMN IF NOT EXISTS completed_session_id INTEGER REFERENCES study_sessions(id) ON DELETE SET NULL",
+            "ALTER TABLE scheduled_sessions ADD COLUMN IF NOT EXISTS subtopic TEXT",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT",
+        ]
+        with get_connection() as conn:
+            for _m in _pg_migrations:
+                try:
+                    conn.execute(_m)
+                except Exception:
+                    pass
+
         # Seed default weights in PostgreSQL
         with get_connection() as conn:
             row = conn.execute("SELECT COUNT(*) as total FROM curriculum_weights").fetchone()
