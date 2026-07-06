@@ -385,6 +385,8 @@ elif not st.session_state.practice_submitted:
     total     = len(questions)
 
     # ── Timer ─────────────────────────────────────────────────────
+    if st.session_state.practice_start_time is None:
+        st.session_state.practice_start_time = time.time()
     elapsed_secs = time.time() - st.session_state.practice_start_time
     timer_total  = st.session_state.get("practice_timer_secs", total * 90)
     remaining    = max(0, timer_total - elapsed_secs)

@@ -194,6 +194,8 @@ elif st.session_state.exam_started and not st.session_state.exam_submitted:
     flags     = st.session_state.get("exam_flags", set())
     curr_idx  = st.session_state.get("exam_current_idx", 0)
     duration_secs = st.session_state.exam_duration_mins * 60
+    if st.session_state.exam_start_time is None:
+        st.session_state.exam_start_time = time.time()
     elapsed = time.time() - st.session_state.exam_start_time
     remaining = max(0, duration_secs - elapsed)
     total     = len(questions)
@@ -250,7 +252,7 @@ elif st.session_state.exam_started and not st.session_state.exam_submitted:
         # The key includes the start_time so the component is only re-created on new sessions.
         start_t = st.session_state.exam_start_time or time.time()
         epoch_key = int(start_t)
-        deadline_epoch = int(start_t) + int(timer_total)
+        deadline_epoch = int(start_t) + int(duration_secs)
         components.html(
             f"""<script>
 (function() {{
