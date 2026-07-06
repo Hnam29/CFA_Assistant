@@ -177,8 +177,8 @@ CFA_TOPICS: Dict[str, Dict] = {
         ],
     },
 
-    # ── 10. Portfolio Construction ────────────────────────────────────────────
-    "Portfolio Construction": {
+    # ── 10. Portfolio Management ──────────────────────────────────────────────────────────
+    "Portfolio Management": {
         "weight": 10,
         "color": "#14b8a6",
         "subtopics": [
@@ -205,7 +205,7 @@ TOPIC_NAME_MIGRATIONS: Dict[str, str] = {
     "Financial Statement": "Financial Statement Analysis",
     "Equity Investments": "Equities",
     "Corporate Issuers": "Corporate Finance",
-    "Portfolio Management": "Portfolio Construction",
+    "Portfolio Construction": "Portfolio Management",
 }
 
 

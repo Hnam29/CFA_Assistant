@@ -10,11 +10,14 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import streamlit as st
-from database.db import init_db, get_chat_history, save_chat_message, clear_chat_history, get_topic_performance
+from database.db import (
+    init_db, get_chat_history, save_chat_message,
+    clear_chat_history, get_topic_performance,
+    get_user_profile, is_premium_user,
+)
 from utils.auth import is_logged_in, get_current_user, render_auth_page
 from utils.cfa_topics import TOPIC_NAMES
 from core.chatbot_engine import chat_with_tutor
-from database.db import get_user_profile
 
 st.set_page_config(page_title="AI Tutor · CFA Assistant", page_icon="🤖", layout="wide")
 
@@ -32,6 +35,22 @@ uid  = user["id"]
 
 from utils.sidebar import render_sidebar
 render_sidebar()
+
+# ── Premium Gate ───────────────────────────────────────────────────
+if not is_premium_user(uid):
+    st.markdown(
+        """<div style="background:#0f172a;border:1px solid #6366f1;border-radius:14px;
+                      padding:3rem 2rem;text-align:center;max-width:520px;margin:4rem auto;">
+        <div style="font-size:3rem;">🔒</div>
+        <h2 style="color:#f1f5f9;font-size:1.5rem;margin:0.75rem 0;">AI Tutor — Premium Feature</h2>
+        <p style="color:#94a3b8;margin:0 auto 1.5rem;">The AI Tutor chatbot is available to
+        <strong style="color:#818cf8;">Premium</strong> users only.<br>
+        Upgrade your account or ask your administrator to grant access.</p>
+        <p style="font-size:0.8rem;color:#64748b;">💡 Practice questions (Question Bank) remain available on the free plan.</p>
+        </div>""",
+        unsafe_allow_html=True,
+    )
+    st.stop()
 
 # ── State init ────────────────────────────────────────────────────
 if "chat_messages" not in st.session_state:

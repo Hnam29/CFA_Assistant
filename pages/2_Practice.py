@@ -15,7 +15,7 @@ from database.db import (
     init_db, create_session, complete_session,
     save_question, save_answer, upsert_topic_performance,
     get_topic_performance, get_bank_questions, get_bank_stats,
-    delete_bank_questions, is_premium_user,
+    delete_bank_questions,
 )
 from utils.auth import is_logged_in, get_current_user, render_auth_page
 from utils.cfa_topics import TOPIC_NAMES, get_subtopics, DIFFICULTY_LEVELS, normalize_topic_name
@@ -115,13 +115,6 @@ if not st.session_state.practice_questions:
                     key="prac_difficulty",
                 )
                 num_questions = st.slider("📝 Number of Questions", min_value=3, max_value=15, value=5, key="prac_num")
-
-                # ── Subscription check ─────────────────────────────────────────
-                is_premium = is_premium_user(uid)
-                FREE_LIMIT = 5
-                if not is_premium and num_questions > FREE_LIMIT:
-                    st.warning(f"⚠️ Free account: capped at **{FREE_LIMIT} questions** per session.")
-                    num_questions = FREE_LIMIT
 
                 st.markdown("</div>", unsafe_allow_html=True)
 
@@ -443,45 +436,45 @@ elif not st.session_state.practice_submitted:
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # Live JS countdown — updates every second without a Python rerun
-        danger_threshold = 90
-        warn_threshold = 270
-        timer_color = "#ef4444" if remaining < danger_threshold else "#f59e0b" if remaining < warn_threshold else "#f1f5f9"
+        # Live JS countdown — one epoch per session, synced from Python server time
+        # The key includes the start_time so the component is only re-created on new sessions.
+        epoch_key = int(st.session_state.practice_start_time)
+        deadline_epoch = int(st.session_state.practice_start_time) + int(timer_total)
         import streamlit.components.v1 as components
         components.html(
             f"""<script>
 (function() {{
-  var rem = {int(remaining)};
+  // Use wall-clock deadline so reruns never reset the JS counter
+  var deadline = {deadline_epoch} * 1000;  // ms
   function pad(n) {{ return (n < 10 ? '0' : '') + n; }}
   function tick() {{
+    var rem = Math.max(0, Math.floor((deadline - Date.now()) / 1000));
     var m = Math.floor(rem / 60);
     var s = rem % 60;
-    // Try to find and update the timer span in the parent Streamlit page
     try {{
-      var frames = window.parent.document.querySelectorAll('#prac-timer-display');
-      if (frames.length) {{ frames[0].textContent = pad(m) + ':' + pad(s); }}
+      var el = window.parent.document.querySelector('#prac-timer-display');
+      if (el) {{ el.textContent = pad(m) + ':' + pad(s); }}
+      el.style.color = rem < 90 ? '#ef4444' : rem < 270 ? '#f59e0b' : '#f1f5f9';
     }} catch(e) {{}}
     if (rem <= 0) {{
       try {{
         var btns = window.parent.document.querySelectorAll('button');
         for (var i = 0; i < btns.length; i++) {{
           if (btns[i].textContent.trim() === 'Auto Submit') {{
-            btns[i].click();
-            return;
+            btns[i].click(); return;
           }}
         }}
       }} catch(e) {{}}
-      // Fallback if click fails
       window.parent.location.reload();
       return;
     }}
-    rem--;
-    setTimeout(tick, 1000);
+    setTimeout(tick, 500);
   }}
   tick();
 }})();
 </script>""",
             height=0,
+            key=f"prac_timer_{epoch_key}",
         )
     with top_col2:
         if st.button("Finish Test", key="cbt_finish_top", use_container_width=True, type="primary"):
