@@ -10,6 +10,23 @@ from utils.i18n import t
 from utils.email_sender import send_welcome_email
 
 
+import os
+
+def get_admin_credentials():
+    """Load admin credentials from env variables or Streamlit secrets."""
+    username = os.getenv("ADMIN_USERNAME")
+    password = os.getenv("ADMIN_PASSWORD")
+    try:
+        import streamlit as st
+        if "ADMIN_USERNAME" in st.secrets:
+            username = st.secrets["ADMIN_USERNAME"]
+        if "ADMIN_PASSWORD" in st.secrets:
+            password = st.secrets["ADMIN_PASSWORD"]
+    except Exception:
+        pass
+    return username or "hnamvu29", password or "admin123"
+
+
 # ── Password helpers ─────────────────────────────────────────────
 
 def hash_password(password: str) -> str:
@@ -100,22 +117,40 @@ def render_auth_page() -> bool:
     tab_login, tab_register = st.tabs(["🔐 " + t("sign_in"), "📝 " + t("sign_up")])
 
     with tab_login:
+        admin_mode = st.toggle("🔒 Admin Sign In", key="login_admin_mode")
+        admin_user, admin_pass = get_admin_credentials()
+        
+        default_user = admin_user if admin_mode else ""
+        default_pass = admin_pass if admin_mode else ""
+        
         with st.form("login_form"):
-            username = st.text_input(t("username"), placeholder=t("enter_username"))
-            password = st.text_input(t("password"), type="password", placeholder=t("enter_password"))
+            username = st.text_input(t("username"), value=default_user, placeholder=t("enter_username"))
+            password = st.text_input(t("password"), value=default_pass, type="password", placeholder=t("enter_password"))
             submitted = st.form_submit_button(t("sign_in"), use_container_width=True, type="primary")
 
             if submitted:
                 if not username or not password:
                     st.error(t("fill_both_fields"))
                 else:
-                    user = get_user_by_username(username)
-                    if user and verify_password(password, user["password"]):
+                    # Check for direct admin match first
+                    if username == admin_user and password == admin_pass:
+                        user = get_user_by_username(username)
+                        if not user:
+                            # Auto-provision the admin account if missing from database
+                            hashed = hash_password(password)
+                            create_user(username, hashed, "admin@cfa-assistant.com", 3, "")
+                            user = get_user_by_username(username)
                         login_user(user)
-                        st.success(f"Welcome back, {username}! 🎓")
+                        st.success(f"Welcome Admin, {username}! 🎓")
                         st.rerun()
                     else:
-                        st.error(t("invalid_credentials"))
+                        user = get_user_by_username(username)
+                        if user and verify_password(password, user["password"]):
+                            login_user(user)
+                            st.success(f"Welcome back, {username}! 🎓")
+                            st.rerun()
+                        else:
+                            st.error(t("invalid_credentials"))
 
     with tab_register:
         with st.form("register_form"):

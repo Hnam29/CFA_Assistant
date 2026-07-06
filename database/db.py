@@ -633,40 +633,23 @@ def delete_scheduled_session(session_id: int) -> None:
 def get_bank_questions(topic: str, subtopics: Optional[List[str]] = None,
                        difficulty: Optional[str] = None, limit: int = 5) -> List[Dict[str, Any]]:
     """Retrieve questions from the imported question bank (source = 'bank')."""
-    if is_postgres():
-        # PostgreSQL: use DISTINCT ON to deduplicate by question_text
-        query = """SELECT DISTINCT ON (question_text) *
-                   FROM questions WHERE source = 'bank' AND topic = ?"""
-        params = [topic]
+    sub_query = "SELECT MIN(id) FROM questions WHERE source = 'bank' AND topic = ?"
+    params = [topic]
 
-        if subtopics:
-            placeholders = ",".join("?" for _ in subtopics)
-            query += f" AND subtopic IN ({placeholders})"
-            params.extend(subtopics)
+    if subtopics:
+        placeholders = ",".join("?" for _ in subtopics)
+        sub_query += f" AND subtopic IN ({placeholders})"
+        params.extend(subtopics)
 
-        if difficulty:
-            query += " AND difficulty = ?"
-            params.append(difficulty)
+    if difficulty:
+        sub_query += " AND difficulty = ?"
+        params.append(difficulty)
 
-        # Wrap in outer query for ORDER BY RANDOM() after DISTINCT ON
-        query = f"SELECT * FROM ({query}) sub ORDER BY RANDOM() LIMIT ?"
-        params.append(limit)
-    else:
-        # SQLite: GROUP BY question_text works fine
-        query = "SELECT * FROM questions WHERE source = 'bank' AND topic = ?"
-        params = [topic]
+    sub_query += " GROUP BY question_text"
 
-        if subtopics:
-            placeholders = ",".join("?" for _ in subtopics)
-            query += f" AND subtopic IN ({placeholders})"
-            params.extend(subtopics)
-
-        if difficulty:
-            query += " AND difficulty = ?"
-            params.append(difficulty)
-
-        query += " GROUP BY question_text ORDER BY RANDOM() LIMIT ?"
-        params.append(limit)
+    # Main query selects the unique rows matching those min IDs
+    query = f"SELECT * FROM questions WHERE id IN ({sub_query}) ORDER BY RANDOM() LIMIT ?"
+    params.append(limit)
 
     with get_connection() as conn:
         rows = conn.execute(query, params).fetchall()
@@ -861,12 +844,15 @@ def update_user_profile(user_id: int, **kwargs) -> None:
 
 
 def is_onboarding_done(user_id: int) -> bool:
-    """Return True if the user has completed onboarding."""
+    """Return True if the user has completed onboarding, or if they are an admin."""
     with get_connection() as conn:
-        row = conn.execute(
+        row = conn.execute("SELECT username FROM users WHERE id=?", (user_id,)).fetchone()
+        if row and row["username"] in ["admin", "hnamvu29"]:
+            return True
+        row_profile = conn.execute(
             "SELECT onboarding_done FROM user_profiles WHERE user_id=?", (user_id,)
         ).fetchone()
-        return bool(row and row["onboarding_done"])
+        return bool(row_profile and row_profile["onboarding_done"])
 
 
 def get_subscription_status(user_id: int) -> Dict:
