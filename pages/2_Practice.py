@@ -439,8 +439,9 @@ elif not st.session_state.practice_submitted:
 
         # Live JS countdown — one epoch per session, synced from Python server time
         # The key includes the start_time so the component is only re-created on new sessions.
-        epoch_key = int(st.session_state.practice_start_time)
-        deadline_epoch = int(st.session_state.practice_start_time) + int(timer_total)
+        start_t = st.session_state.practice_start_time or time.time()
+        epoch_key = int(start_t)
+        deadline_epoch = int(start_t) + int(timer_total)
         components.html(
             f"""<script>
 (function() {{
