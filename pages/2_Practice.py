@@ -14,7 +14,8 @@ import streamlit as st
 from database.db import (
     init_db, create_session, complete_session,
     save_question, save_answer, upsert_topic_performance,
-    get_bank_stats, delete_bank_questions,
+    get_topic_performance, get_bank_questions, get_bank_stats,
+    is_premium_user, get_subscription_status,
 )
 from utils.auth import is_logged_in, get_current_user, render_auth_page
 from utils.cfa_topics import TOPIC_NAMES, get_subtopics, DIFFICULTY_LEVELS, normalize_topic_name
@@ -114,6 +115,13 @@ if not st.session_state.practice_questions:
                     key="prac_difficulty",
                 )
                 num_questions = st.slider("📝 Number of Questions", min_value=3, max_value=15, value=5, key="prac_num")
+
+                # ── Subscription check ─────────────────────────────────────────
+                is_premium = is_premium_user(uid)
+                FREE_LIMIT = 5
+                if not is_premium and num_questions > FREE_LIMIT:
+                    st.warning(f"⚠️ Free account: capped at **{FREE_LIMIT} questions** per session.")
+                    num_questions = FREE_LIMIT
 
                 st.markdown("</div>", unsafe_allow_html=True)
 
@@ -515,28 +523,22 @@ elif not st.session_state.practice_submitted:
 
     with body_col_left:
         st.markdown("**Questions**")
-        with st.container(height=450):
-            for r in range(0, total, 4):
-                grid_cols = st.columns(4)
-                for c in range(4):
-                    idx = r + c
-                    if idx < total:
-                        is_ans = str(idx) in answers
-                        is_act = (idx == curr_idx)
-                        is_flg = idx in flags
-                        
-                        lbl = f"{idx+1}"
-                        if is_flg:
-                            lbl += "🚩"
-                        elif is_ans:
-                            lbl += "✓"
-                            
-                        btn_type = "primary" if is_act else "secondary"
-                        with grid_cols[c]:
-                            # Paddingless compact styling
-                            if st.button(lbl, key=f"cbt_nav_{idx}", use_container_width=True, type=btn_type):
-                                st.session_state.practice_current_idx = idx
-                                st.rerun()
+        with st.container(height=480):
+            for idx in range(total):
+                is_ans = str(idx) in answers
+                is_act = (idx == curr_idx)
+                is_flg = idx in flags
+
+                lbl = f"Q{idx+1}"
+                if is_flg:
+                    lbl += " 🚩"
+                elif is_ans:
+                    lbl += " ✓"
+
+                btn_type = "primary" if is_act else "secondary"
+                if st.button(lbl, key=f"cbt_nav_{idx}", use_container_width=True, type=btn_type):
+                    st.session_state.practice_current_idx = idx
+                    st.rerun()
 
     with body_col_right:
         st.markdown('<div class="cbt-body">', unsafe_allow_html=True)

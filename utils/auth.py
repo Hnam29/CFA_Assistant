@@ -129,8 +129,11 @@ def render_auth_page() -> bool:
                 if not username or not password:
                     st.error(t("fill_both_fields"))
                 else:
-                    admin_user, admin_pass = get_admin_credentials()
-                    if username == admin_user and password == admin_pass:
+                    try:
+                        admin_user, admin_pass = get_admin_credentials()
+                    except RuntimeError:
+                        admin_user, admin_pass = None, None
+                    if admin_user and username == admin_user and password == admin_pass:
                         user = get_user_by_username(username)
                         if not user:
                             hashed = hash_password(password)

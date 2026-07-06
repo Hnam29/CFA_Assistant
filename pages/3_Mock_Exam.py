@@ -14,6 +14,7 @@ from database.db import (
     init_db, create_session, complete_session,
     save_question, save_answer, upsert_topic_performance,
     get_topic_performance, get_curriculum_weights,
+    is_premium_user,
 )
 from utils.auth import is_logged_in, get_current_user, render_auth_page
 from utils.cfa_topics import TOPIC_NAMES, TOPIC_WEIGHTS, CFA_TOPICS
@@ -70,6 +71,19 @@ st.markdown(
 # SETUP
 # ─────────────────────────────────────────────────────────────────
 if not st.session_state.exam_started:
+    # ── Premium Gate ────────────────────────────────────────────────
+    if not is_premium_user(uid):
+        st.markdown(
+            """<div style="background:#0f172a;border:1px solid #6366f1;border-radius:14px;padding:2.5rem;text-align:center;">
+            <div style="font-size:3rem;">🔒</div>
+            <h2 style="color:#f1f5f9;font-size:1.5rem;margin:0.5rem 0;">Premium Feature</h2>
+            <p style="color:#94a3b8;max-width:480px;margin:0 auto 1.5rem;">Mock Exams require a <strong style="color:#818cf8;">Premium account</strong>.<br>Upgrade or ask your administrator for access.</p>
+            <p style="font-size:0.8rem;color:#64748b;">💡 Practice sessions (up to 5 questions) are available on the free plan.</p>
+            </div>""",
+            unsafe_allow_html=True,
+        )
+        st.stop()
+
     col_l, col_r = st.columns([1.2, 1])
 
     with col_l:
@@ -322,28 +336,23 @@ elif st.session_state.exam_started and not st.session_state.exam_submitted:
 
     with body_col_left:
         st.markdown("**Questions**")
-        with st.container(height=450):
-            for r in range(0, total, 4):
-                grid_cols = st.columns(4)
-                for c in range(4):
-                    idx = r + c
-                    if idx < total:
-                        ans_key = str(idx)
-                        is_ans = ans_key in answers
-                        is_act = (idx == curr_idx)
-                        is_flg = idx in flags
-                        
-                        lbl = f"{idx+1}"
-                        if is_flg:
-                            lbl += "🚩"
-                        elif is_ans:
-                            lbl += "✓"
-                            
-                        btn_type = "primary" if is_act else "secondary"
-                        with grid_cols[c]:
-                            if st.button(lbl, key=f"cbt_mock_nav_{idx}", use_container_width=True, type=btn_type):
-                                st.session_state.exam_current_idx = idx
-                                st.rerun()
+        with st.container(height=480):
+            for idx in range(total):
+                ans_key = str(idx)
+                is_ans = ans_key in answers
+                is_act = (idx == curr_idx)
+                is_flg = idx in flags
+
+                lbl = f"Q{idx+1}"
+                if is_flg:
+                    lbl += " 🚩"
+                elif is_ans:
+                    lbl += " ✓"
+
+                btn_type = "primary" if is_act else "secondary"
+                if st.button(lbl, key=f"cbt_mock_nav_{idx}", use_container_width=True, type=btn_type):
+                    st.session_state.exam_current_idx = idx
+                    st.rerun()
 
 
     with body_col_right:

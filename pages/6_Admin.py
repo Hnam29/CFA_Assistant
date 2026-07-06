@@ -13,6 +13,7 @@ import streamlit as st
 from database.db import (
     init_db, get_all_users, get_user_summary_stats,
     get_user_sessions, get_user_profile, get_topic_performance,
+    grant_premium_access, revoke_premium_access, delete_user,
 )
 from utils.auth import is_logged_in, get_current_user, render_auth_page, get_admin_credentials
 from utils.sidebar import render_sidebar
@@ -229,12 +230,45 @@ else:
                     unsafe_allow_html=True,
                 )
 
-                # Details button — uses session_state to track which user's detail is open
+                # ── Action Buttons ─────────────────────────────────────────────────
+                btn_row = st.columns([1, 1, 1])
+
+                # Details toggle
                 detail_key = f"show_detail_{uid_u}"
-                btn_label = "🔽 Hide Details" if st.session_state.get(detail_key) else "👁 View Details"
-                if st.button(btn_label, key=f"btn_detail_{uid_u}", use_container_width=True):
+                btn_label = "🔽 Hide" if st.session_state.get(detail_key) else "👁 Details"
+                if btn_row[0].button(btn_label, key=f"btn_detail_{uid_u}", use_container_width=True):
                     st.session_state[detail_key] = not st.session_state.get(detail_key, False)
                     st.rerun()
+
+                # Grant / Revoke premium
+                if plan in ("premium", "pro", "admin"):
+                    if btn_row[1].button("🔓 Revoke", key=f"btn_revoke_{uid_u}", use_container_width=True):
+                        revoke_premium_access(uid_u)
+                        st.success(f"Revoked premium for {username}")
+                        st.rerun()
+                else:
+                    if btn_row[1].button("⭐ Grant", key=f"btn_grant_{uid_u}", use_container_width=True, type="primary"):
+                        grant_premium_access(uid_u)
+                        st.success(f"Granted premium to {username}")
+                        st.rerun()
+
+                # Delete user (with confirmation)
+                confirm_key = f"confirm_del_{uid_u}"
+                if st.session_state.get(confirm_key):
+                    st.warning(f"Delete **{username}** permanently?")
+                    yes_col, no_col = st.columns(2)
+                    if yes_col.button("✅ Yes, delete", key=f"yes_del_{uid_u}", use_container_width=True, type="primary"):
+                        delete_user(uid_u)
+                        st.session_state.pop(confirm_key, None)
+                        st.success(f"Deleted user {username}")
+                        st.rerun()
+                    if no_col.button("❌ Cancel", key=f"no_del_{uid_u}", use_container_width=True):
+                        st.session_state.pop(confirm_key, None)
+                        st.rerun()
+                else:
+                    if btn_row[2].button("🗑 Delete", key=f"btn_del_{uid_u}", use_container_width=True):
+                        st.session_state[confirm_key] = True
+                        st.rerun()
 
                 # Inline detail panel
                 if st.session_state.get(detail_key):

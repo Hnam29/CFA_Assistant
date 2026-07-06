@@ -137,29 +137,36 @@ if show_auth == "login":
         st.markdown("<h3 style='text-align:center; color:#f1f5f9;'>🔐 " + t("sign_in") + "</h3>", unsafe_allow_html=True)
         st.markdown(f"<p style='text-align:center; color:#64748b; font-size:0.85rem; margin-top:-0.5rem;'>{t('access_portal')}</p>", unsafe_allow_html=True)
 
-        from utils.auth import get_admin_credentials
         admin_mode = st.toggle("🔒 Admin Sign In", key="login_admin_mode_landing")
-        admin_user, admin_pass = get_admin_credentials()
-        
-        default_user = admin_user if admin_mode else ""
-        default_pass = admin_pass if admin_mode else ""
 
         with st.form("landing_login_form"):
-            username = st.text_input(t("username"), value=default_user, placeholder=t("enter_username"))
-            password = st.text_input(t("password"), value=default_pass, type="password", placeholder=t("enter_password"))
+            if admin_mode:
+                st.markdown(
+                    "<p style='color:#818cf8;font-size:0.82rem;'>🔑 Enter administrator credentials below</p>",
+                    unsafe_allow_html=True,
+                )
+            username = st.text_input(t("username"), placeholder=t("enter_username"))
+            password = st.text_input(t("password"), type="password", placeholder=t("enter_password"))
             submitted = st.form_submit_button(t("sign_in"), use_container_width=True, type="primary")
 
             if submitted:
                 if not username or not password:
                     st.error(t("fill_both_fields"))
                 else:
-                    from utils.auth import get_user_by_username, verify_password, login_user, hash_password
+                    from utils.auth import (
+                        get_admin_credentials, get_user_by_username,
+                        verify_password, login_user, hash_password,
+                    )
                     from database.db import create_user
-                    
-                    if username == admin_user and password == admin_pass:
+
+                    try:
+                        admin_user, admin_pass = get_admin_credentials()
+                    except RuntimeError:
+                        admin_user, admin_pass = None, None
+
+                    if admin_user and username == admin_user and password == admin_pass:
                         user = get_user_by_username(username)
                         if not user:
-                            # Auto-provision the admin account
                             hashed = hash_password(password)
                             create_user(username, hashed, "admin@cfa-assistant.com", 3, "")
                             user = get_user_by_username(username)

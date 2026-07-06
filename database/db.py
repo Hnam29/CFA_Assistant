@@ -218,43 +218,35 @@ def init_db() -> None:
     with get_connection() as conn:
         schema = SCHEMA_PATH.read_text()
         conn.conn.executescript(schema)
+        # ── Column migrations (use IF NOT EXISTS for PostgreSQL) ────────────────
+        _migrations = [
+            "ALTER TABLE questions ADD COLUMN source TEXT DEFAULT 'ai'",
+            "ALTER TABLE scheduled_sessions ADD COLUMN creator TEXT DEFAULT 'system'",
+            "ALTER TABLE scheduled_sessions ADD COLUMN completed_session_id INTEGER",
+            "ALTER TABLE scheduled_sessions ADD COLUMN subtopic TEXT",
+            "ALTER TABLE users ADD COLUMN phone TEXT",
+        ]
+        for _m in _migrations:
+            try:
+                if is_postgres():
+                    # PostgreSQL: extract column name and table, use IF NOT EXISTS
+                    _col = _m.split("ADD COLUMN ")[1].split()[0]
+                    _tbl = _m.split("ALTER TABLE ")[1].split()[0]
+                    conn.execute(
+                        f"ALTER TABLE {_tbl} ADD COLUMN IF NOT EXISTS "
+                        + " ".join(_m.split("ADD COLUMN ")[1].split()[0:])
+                    )
+                else:
+                    conn.execute(_m)
+            except Exception:
+                pass
 
-        # ── Column migrations ────────────────────────────────────────────────
-        # Add source column to questions if missing (legacy migration)
-        try:
-            conn.execute("ALTER TABLE questions ADD COLUMN source TEXT DEFAULT 'ai'")
-        except sqlite3.OperationalError:
-            pass
-
-        # Add creator column to scheduled_sessions if missing
-        try:
-            conn.execute("ALTER TABLE scheduled_sessions ADD COLUMN creator TEXT DEFAULT 'system'")
-        except sqlite3.OperationalError:
-            pass
-
-        # Add completed_session_id column to scheduled_sessions if missing
-        try:
-            conn.execute("ALTER TABLE scheduled_sessions ADD COLUMN completed_session_id INTEGER REFERENCES study_sessions(id)")
-        except sqlite3.OperationalError:
-            pass
-
-        # Add phone column to users if missing
-        try:
-            conn.execute("ALTER TABLE users ADD COLUMN phone TEXT")
-        except sqlite3.OperationalError:
-            pass
-
-        # Remove cfa_level column from users if it exists (schema cleanup)
-        try:
-            conn.execute("ALTER TABLE users DROP COLUMN cfa_level")
-        except sqlite3.OperationalError:
-            pass
-
-        # Add subtopic column to scheduled_sessions if missing
-        try:
-            conn.execute("ALTER TABLE scheduled_sessions ADD COLUMN subtopic TEXT")
-        except sqlite3.OperationalError:
-            pass
+        # Remove cfa_level column (SQLite only — Postgres schema never had it)
+        if not is_postgres():
+            try:
+                conn.execute("ALTER TABLE users DROP COLUMN cfa_level")
+            except Exception:
+                pass
 
         # Seed curriculum weights if empty
         try:
@@ -903,4 +895,42 @@ def get_curriculum_weights() -> Dict[str, float]:
             from utils.cfa_topics import TOPIC_WEIGHTS
             return TOPIC_WEIGHTS
         return {r["topic"]: r["weight"] for r in rows}
+
+
+def is_premium_user(user_id: int) -> bool:
+    """Return True if the user has an active premium subscription or admin-granted access."""
+    sub = get_subscription_status(user_id)
+    return sub.get("subscription_plan") in ("premium", "pro", "admin")
+
+
+def grant_premium_access(user_id: int) -> None:
+    """Admin: Grant premium access to a user (sets plan to 'premium', status to 'active')."""
+    with get_connection() as conn:
+        conn.execute(
+            """UPDATE user_profiles SET subscription_plan='premium', subscription_status='active',
+               updated_at=CURRENT_TIMESTAMP WHERE user_id=?""",
+            (user_id,)
+        )
+
+
+def revoke_premium_access(user_id: int) -> None:
+    """Admin: Revert a user's plan back to free."""
+    with get_connection() as conn:
+        conn.execute(
+            """UPDATE user_profiles SET subscription_plan='free', subscription_status='inactive',
+               updated_at=CURRENT_TIMESTAMP WHERE user_id=?""",
+            (user_id,)
+        )
+
+
+def delete_user(user_id: int) -> None:
+    """Admin: Permanently delete a user and all their data."""
+    with get_connection() as conn:
+        for tbl in ["user_answers", "study_sessions", "scheduled_sessions",
+                    "topic_performance", "chat_history", "user_profiles"]:
+            try:
+                conn.execute(f"DELETE FROM {tbl} WHERE user_id=?", (user_id,))
+            except Exception:
+                pass
+        conn.execute("DELETE FROM users WHERE id=?", (user_id,))
 
