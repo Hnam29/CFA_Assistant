@@ -263,7 +263,7 @@ def init_db() -> None:
                     "Fixed Income": 11.5,
                     "Derivatives": 6.5,
                     "Alternative Investments": 6.5,
-                    "Portfolio Construction": 6.5
+                    "Portfolio Management": 6.5
                 }
                 for topic, weight in TOPIC_WEIGHTS.items():
                     conn.execute("INSERT OR IGNORE INTO curriculum_weights (topic, weight) VALUES (?, ?)", (topic, weight))
@@ -276,9 +276,9 @@ def init_db() -> None:
             ("Ethics and Professional Standards", "Ethical and Professional Standards"),
             ("Equity Investments",               "Equities"),
             ("Corporate Issuers",                "Corporate Finance"),
-            ("Portfolio Management",             "Portfolio Construction"),
+            ("Portfolio Construction",           "Portfolio Management"),
         ]
-        tables_with_topic = ["study_sessions", "questions", "topic_performance", "scheduled_sessions"]
+        tables_with_topic = ["study_sessions", "questions", "topic_performance", "scheduled_sessions", "curriculum_weights"]
         for old, new in TOPIC_RENAMES:
             for table in tables_with_topic:
                 try:
@@ -894,7 +894,8 @@ def get_curriculum_weights() -> Dict[str, float]:
         if not rows:
             from utils.cfa_topics import TOPIC_WEIGHTS
             return TOPIC_WEIGHTS
-        return {r["topic"]: r["weight"] for r in rows}
+        from utils.cfa_topics import normalize_topic_name
+        return {normalize_topic_name(r["topic"]): r["weight"] for r in rows}
 
 
 def is_premium_user(user_id: int) -> bool:
