@@ -15,7 +15,7 @@ from database.db import (
     init_db, create_session, complete_session,
     save_question, save_answer, upsert_topic_performance,
     get_topic_performance, get_bank_questions, get_bank_stats,
-    is_premium_user, get_subscription_status,
+    delete_bank_questions, is_premium_user,
 )
 from utils.auth import is_logged_in, get_current_user, render_auth_page
 from utils.cfa_topics import TOPIC_NAMES, get_subtopics, DIFFICULTY_LEVELS, normalize_topic_name
