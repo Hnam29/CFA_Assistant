@@ -14,7 +14,15 @@ SCHEMA_PATH = Path(__file__).parent / "schema.sql"
 
 def is_postgres() -> bool:
     """Return True if a PostgreSQL/Supabase database URL is configured."""
-    return bool(os.getenv("SUPABASE_DB_URL") or os.getenv("DATABASE_URL"))
+    if os.getenv("SUPABASE_DB_URL") or os.getenv("DATABASE_URL"):
+        return True
+    try:
+        import streamlit as st
+        if "SUPABASE_DB_URL" in st.secrets or "DATABASE_URL" in st.secrets:
+            return True
+    except Exception:
+        pass
+    return False
 
 
 class UnifiedCursor:

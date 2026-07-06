@@ -297,21 +297,25 @@ for col_idx, col_def in enumerate(COLUMNS):
     with kanban_cols[col_idx]:
         # Column header
         st.markdown(
-            textwrap.dedent(f"""<div class="kanban-col-header" style="color:{col_def['color']};border-color:{col_def['border_color']};">
-                {col_def['label']}
-                <span style="background:{col_def['border_color']}22;color:{col_def['count_color']};
-                             padding:1px 8px;border-radius:99px;font-size:0.7rem;">
-                    {len(items)}
-                </span>
-            </div>"""),
+            textwrap.dedent(f"""
+                <div class="kanban-col-header" style="color:{col_def['color']};border-color:{col_def['border_color']};">
+                    {col_def['label']}
+                    <span style="background:{col_def['border_color']}22;color:{col_def['count_color']};
+                                 padding:1px 8px;border-radius:99px;font-size:0.7rem;">
+                        {len(items)}
+                    </span>
+                </div>
+            """),
             unsafe_allow_html=True,
         )
 
         if not items:
             st.markdown(
-                textwrap.dedent(f"""<div style="text-align:center;padding:2rem 0.5rem;color:#475569;font-size:0.8rem;">
-                    {col_def['empty_msg']}
-                </div>"""),
+                textwrap.dedent(f"""
+                    <div style="text-align:center;padding:2rem 0.5rem;color:#475569;font-size:0.8rem;">
+                        {col_def['empty_msg']}
+                    </div>
+                """),
                 unsafe_allow_html=True,
             )
         else:
@@ -333,13 +337,15 @@ for col_idx, col_def in enumerate(COLUMNS):
                     date_label = s.get("scheduled_date", "")
 
                 st.markdown(
-                    textwrap.dedent(f"""<div class="kanban-card">
-                        <div class="kcard-topic">{icon} {s['topic']}</div>
-                        {f'<div class="kcard-sub">📌 {subtopic}</div>' if subtopic else ""}
-                        <div class="kcard-date">📅 {date_label} · {session_type}</div>
-                        {f'<div class="kcard-reason">{reason}</div>' if reason else ""}
-                        <div><span class="kcard-badge badge-{priority}">{priority}</span></div>
-                    </div>"""),
+                    textwrap.dedent(f"""
+                        <div class="kanban-card">
+                            <div class="kcard-topic">{icon} {s['topic']}</div>
+                            {f'<div class="kcard-sub">📌 {subtopic}</div>' if subtopic else ""}
+                            <div class="kcard-date">📅 {date_label} · {session_type}</div>
+                            {f'<div class="kcard-reason">{reason}</div>' if reason else ""}
+                            <div><span class="kcard-badge badge-{priority}">{priority}</span></div>
+                        </div>
+                    """),
                     unsafe_allow_html=True,
                 )
 

@@ -14,7 +14,7 @@ from database.db import (
     init_db, get_all_users, get_user_summary_stats,
     get_user_sessions, get_user_profile, get_topic_performance,
 )
-from utils.auth import is_logged_in, get_current_user, render_auth_page
+from utils.auth import is_logged_in, get_current_user, render_auth_page, get_admin_credentials
 from utils.sidebar import render_sidebar
 
 st.set_page_config(page_title="Admin Dashboard · CFA Assistant", page_icon="🔑", layout="wide")
@@ -97,9 +97,9 @@ if not is_logged_in():
     st.stop()
 
 user = get_current_user()
-ADMIN_USERNAMES = ["hnamvu29", "admin"]  # Add your own username here
+admin_user, _ = get_admin_credentials()
 
-if user["username"] not in ADMIN_USERNAMES:
+if user["username"] != admin_user:
     st.error("🔒 Access denied. Administrator privileges required.")
     st.info("If you believe this is an error, please contact the system administrator.")
     st.stop()

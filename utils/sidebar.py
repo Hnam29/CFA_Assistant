@@ -20,13 +20,15 @@ def render_sidebar():
 
     # Hide specific page links dynamically via CSS injection
     from database.db import is_onboarding_done
+    from utils.auth import get_admin_credentials
+    admin_user, _ = get_admin_credentials()
     
     # Non-admin users cannot see the Admin Dashboard page link
-    if user["username"] not in ["hnamvu29", "admin"]:
+    if user["username"] != admin_user:
         st.markdown("<style>a[href*='Admin'] { display: none !important; }</style>", unsafe_allow_html=True)
         
     # Onboarded users and admins do not need to see the Onboarding page link
-    if is_onboarding_done(user["id"]) or user["username"] in ["hnamvu29", "admin"]:
+    if is_onboarding_done(user["id"]) or user["username"] == admin_user:
         st.markdown("<style>a[href*='Onboarding'] { display: none !important; }</style>", unsafe_allow_html=True)
 
     with st.sidebar:
