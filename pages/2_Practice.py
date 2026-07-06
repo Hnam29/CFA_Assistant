@@ -123,14 +123,15 @@ if not st.session_state.practice_questions:
 
                 st.markdown("</div>", unsafe_allow_html=True)
 
-                # Check bank stats to see if we have questions for this topic
+                # Check bank availability for offline mode
                 stats = get_bank_stats()
                 topic_count = stats.get(topic, 0)
 
                 if use_bank_only and topic_count == 0:
                     st.warning(f"⚠️ Your local question bank is empty for **{topic}**.")
                     st.info("Please click the **📁 Manage Question Bank** tab at the top to upload some custom questions first!")
-                else:
+
+                if not (use_bank_only and topic_count == 0):
                     if st.button("🚀 Generate Questions", use_container_width=True, type="primary", key="gen_btn"):
                         spinner_msg = (
                             f"📦 Loading {num_questions} questions from your local bank..."
@@ -507,7 +508,7 @@ elif not st.session_state.practice_submitted:
                     "elapsed_secs": elapsed_s,
                     "practice_timer_secs": timer_total,
                 }
-                save_session_state(session_id, state_data)
+                save_session_state(st.session_state.practice_session_id, state_data)
                 
                 # Clear session state keys
                 for k in ["practice_questions", "practice_answers", "practice_submitted", "practice_session_id", "practice_start_time", "practice_current_idx", "practice_flags", "practice_timer_secs", "practice_radio_versions"]:
