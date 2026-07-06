@@ -514,21 +514,29 @@ elif not st.session_state.practice_submitted:
     body_col_left, body_col_right = st.columns([1.2, 8.8])
 
     with body_col_left:
-        st.markdown('<div style="padding-top:0.5rem;">', unsafe_allow_html=True)
-        for idx in range(total):
-            is_ans = str(idx) in answers
-            is_act = (idx == curr_idx)
-            is_flg = idx in flags
-            
-            lbl = f"{idx+1}"
-            if is_flg:
-                lbl += " 🚩"
-                
-            btn_type = "primary" if is_act else "secondary"
-            if st.button(lbl, key=f"cbt_nav_{idx}", use_container_width=True, type=btn_type):
-                st.session_state.practice_current_idx = idx
-                st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown("**Questions**")
+        with st.container(height=450):
+            for r in range(0, total, 4):
+                grid_cols = st.columns(4)
+                for c in range(4):
+                    idx = r + c
+                    if idx < total:
+                        is_ans = str(idx) in answers
+                        is_act = (idx == curr_idx)
+                        is_flg = idx in flags
+                        
+                        lbl = f"{idx+1}"
+                        if is_flg:
+                            lbl += "🚩"
+                        elif is_ans:
+                            lbl += "✓"
+                            
+                        btn_type = "primary" if is_act else "secondary"
+                        with grid_cols[c]:
+                            # Paddingless compact styling
+                            if st.button(lbl, key=f"cbt_nav_{idx}", use_container_width=True, type=btn_type):
+                                st.session_state.practice_current_idx = idx
+                                st.rerun()
 
     with body_col_right:
         st.markdown('<div class="cbt-body">', unsafe_allow_html=True)

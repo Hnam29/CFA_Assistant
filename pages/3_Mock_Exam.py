@@ -321,95 +321,29 @@ elif st.session_state.exam_started and not st.session_state.exam_submitted:
     body_col_left, body_col_right = st.columns([1.4, 8.6])
 
     with body_col_left:
-        # Build the JS-clickable palette HTML — one box per question
-        palette_html_items = []
-        for idx in range(total):
-            ans_key = str(idx)
-            is_ans = ans_key in answers
-            is_act = (idx == curr_idx)
-            is_flg = idx in flags
-            q_num = idx + 1
-
-            if is_act:
-                bg = "#6366f1"
-                border = "#818cf8"
-                color = "#fff"
-            elif is_ans:
-                bg = "#10b981"
-                border = "#34d399"
-                color = "#fff"
-            elif is_flg:
-                bg = "#f59e0b"
-                border = "#fbbf24"
-                color = "#fff"
-            else:
-                bg = "#1e293b"
-                border = "#334155"
-                color = "#94a3b8"
-
-            palette_html_items.append(
-                f'<div title="Q{q_num}{" 🚩" if is_flg else ""}" '
-                f'style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;'
-                f'background:{bg};border:1.5px solid {border};border-radius:6px;'
-                f'font-size:0.72rem;font-weight:700;color:{color};cursor:pointer;'
-                f'flex-shrink:0;transition:transform 0.1s;" '
-                f'onclick="window._cfaNav({idx})">{q_num}</div>'
-            )
-
-        palette_html = "".join(palette_html_items)
-
-        st.markdown(
-            f"""
-            <div style="background:#0f172a;border:1px solid #1e293b;border-radius:10px;padding:0.6rem;
-                        height:calc(100vh - 220px);overflow-y:auto;
-                        scrollbar-width:thin;scrollbar-color:#334155 #0f172a;">
-              <div style="font-size:0.7rem;font-weight:700;color:#475569;text-transform:uppercase;
-                          letter-spacing:0.07em;margin-bottom:0.6rem;padding:0 2px;">
-                Questions
-              </div>
-              <div style="display:flex;flex-wrap:wrap;gap:5px;">
-                {palette_html}
-              </div>
-              <div style="margin-top:0.8rem;border-top:1px solid #1e293b;padding-top:0.6rem;">
-                <div style="font-size:0.65rem;color:#475569;line-height:1.8;">
-                  <span style="display:inline-block;width:10px;height:10px;background:#10b981;border-radius:2px;margin-right:4px;vertical-align:middle;"></span>Answered<br>
-                  <span style="display:inline-block;width:10px;height:10px;background:#6366f1;border-radius:2px;margin-right:4px;vertical-align:middle;"></span>Current<br>
-                  <span style="display:inline-block;width:10px;height:10px;background:#f59e0b;border-radius:2px;margin-right:4px;vertical-align:middle;"></span>Flagged<br>
-                  <span style="display:inline-block;width:10px;height:10px;background:#1e293b;border:1px solid #334155;border-radius:2px;margin-right:4px;vertical-align:middle;"></span>Unanswered
-                </div>
-              </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-        # Hidden nav buttons used by the JS palette click handler
-        st.markdown('<div style="display:none">', unsafe_allow_html=True)
-        for idx in range(total):
-            if st.button(f"__nav_{idx}", key=f"cbt_mock_nav_{idx}"):
-                st.session_state.exam_current_idx = idx
-                st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
-
-        # JS: wire palette clicks to the hidden buttons
-        import streamlit.components.v1 as components_nav
-        components_nav.html(
-            """
-            <script>
-            window._cfaNav = function(idx) {
-              try {
-                var btns = window.parent.document.querySelectorAll('button');
-                for (var i = 0; i < btns.length; i++) {
-                  if (btns[i].textContent.trim() === '__nav_' + idx) {
-                    btns[i].click(); return;
-                  }
-                }
-              } catch(e) {}
-            };
-            </script>
-            """,
-            height=0,
-        )
+        st.markdown("**Questions**")
+        with st.container(height=450):
+            for r in range(0, total, 4):
+                grid_cols = st.columns(4)
+                for c in range(4):
+                    idx = r + c
+                    if idx < total:
+                        ans_key = str(idx)
+                        is_ans = ans_key in answers
+                        is_act = (idx == curr_idx)
+                        is_flg = idx in flags
+                        
+                        lbl = f"{idx+1}"
+                        if is_flg:
+                            lbl += "🚩"
+                        elif is_ans:
+                            lbl += "✓"
+                            
+                        btn_type = "primary" if is_act else "secondary"
+                        with grid_cols[c]:
+                            if st.button(lbl, key=f"cbt_mock_nav_{idx}", use_container_width=True, type=btn_type):
+                                st.session_state.exam_current_idx = idx
+                                st.rerun()
 
 
     with body_col_right:

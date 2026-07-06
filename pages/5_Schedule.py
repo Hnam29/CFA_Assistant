@@ -295,29 +295,13 @@ for col_idx, col_def in enumerate(COLUMNS):
     items = all_by_status.get(col_def["key"], [])
 
     with kanban_cols[col_idx]:
-        # Column header
-        st.markdown(
-            textwrap.dedent(f"""
-                <div class="kanban-col-header" style="color:{col_def['color']};border-color:{col_def['border_color']};">
-                    {col_def['label']}
-                    <span style="background:{col_def['border_color']}22;color:{col_def['count_color']};
-                                 padding:1px 8px;border-radius:99px;font-size:0.7rem;">
-                        {len(items)}
-                    </span>
-                </div>
-            """),
-            unsafe_allow_html=True,
-        )
+        # Column header - single line HTML construction
+        header_html = f'<div class="kanban-col-header" style="color:{col_def["color"]};border-color:{col_def["border_color"]};">{col_def["label"]}<span style="background:{col_def["border_color"]}22;color:{col_def["count_color"]};padding:1px 8px;border-radius:99px;font-size:0.7rem;margin-left:0.5rem;">{len(items)}</span></div>'
+        st.markdown(header_html, unsafe_allow_html=True)
 
         if not items:
-            st.markdown(
-                textwrap.dedent(f"""
-                    <div style="text-align:center;padding:2rem 0.5rem;color:#475569;font-size:0.8rem;">
-                        {col_def['empty_msg']}
-                    </div>
-                """),
-                unsafe_allow_html=True,
-            )
+            empty_html = f'<div style="text-align:center;padding:2rem 0.5rem;color:#475569;font-size:0.8rem;">{col_def["empty_msg"]}</div>'
+            st.markdown(empty_html, unsafe_allow_html=True)
         else:
             for s in items:
                 priority = s.get("priority", "medium")
@@ -336,18 +320,18 @@ for col_idx, col_def in enumerate(COLUMNS):
                 except Exception:
                     date_label = s.get("scheduled_date", "")
 
-                st.markdown(
-                    textwrap.dedent(f"""
-                        <div class="kanban-card">
-                            <div class="kcard-topic">{icon} {s['topic']}</div>
-                            {f'<div class="kcard-sub">📌 {subtopic}</div>' if subtopic else ""}
-                            <div class="kcard-date">📅 {date_label} · {session_type}</div>
-                            {f'<div class="kcard-reason">{reason}</div>' if reason else ""}
-                            <div><span class="kcard-badge badge-{priority}">{priority}</span></div>
-                        </div>
-                    """),
-                    unsafe_allow_html=True,
-                )
+                # Construct single-line card HTML to avoid any Markdown indentation bugs
+                card_html = f'<div class="kanban-card">'
+                card_html += f'<div class="kcard-topic">{icon} {s["topic"]}</div>'
+                if subtopic:
+                    card_html += f'<div class="kcard-sub">📌 {subtopic}</div>'
+                card_html += f'<div class="kcard-date">📅 {date_label} · {session_type}</div>'
+                if reason:
+                    card_html += f'<div class="kcard-reason">{reason}</div>'
+                card_html += f'<div><span class="kcard-badge badge-{priority}">{priority}</span></div>'
+                card_html += '</div>'
+
+                st.markdown(card_html, unsafe_allow_html=True)
 
                 # Action buttons below each card
                 if col_def["key"] == "pending":
