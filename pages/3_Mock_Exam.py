@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import streamlit as st
+import streamlit.components.v1 as components
 from database.db import (
     init_db, create_session, complete_session,
     save_question, save_answer, upsert_topic_performance,
@@ -245,14 +246,18 @@ elif st.session_state.exam_started and not st.session_state.exam_submitted:
             st.rerun()
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # Live JS countdown — updates every second without a Python rerun
-        import streamlit.components.v1 as components
+        # Live JS countdown — one epoch per session, synced from Python server time
+        # The key includes the start_time so the component is only re-created on new sessions.
+        epoch_key = int(st.session_state.exam_start_time)
+        deadline_epoch = int(st.session_state.exam_start_time) + int(timer_total)
         components.html(
             f"""<script>
 (function() {{
-  var rem = {int(remaining)};
+  // Use wall-clock deadline so reruns never reset the JS counter
+  var deadline = {deadline_epoch} * 1000;  // ms
   function pad(n) {{ return (n < 10 ? '0' : '') + n; }}
   function tick() {{
+    var rem = Math.max(0, Math.floor((deadline - Date.now()) / 1000));
     var m = Math.floor(rem / 60);
     var s = rem % 60;
     try {{
@@ -262,22 +267,31 @@ elif st.session_state.exam_started and not st.session_state.exam_submitted:
         el.style.color = rem < 120 ? '#ef4444' : rem < 300 ? '#f59e0b' : '#f1f5f9';
       }}
     }} catch(e) {{}}
+
+    // Hide the Auto Submit button wrapper in parent document
+    try {{
+      var btns = window.parent.document.querySelectorAll('button');
+      for (var i = 0; i < btns.length; i++) {{
+        if (btns[i].textContent.trim() === 'Auto Submit') {{
+          var p = btns[i].closest('.element-container');
+          if (p) p.style.display = 'none';
+        }}
+      }}
+    }} catch(e) {{}}
+
     if (rem <= 0) {{
       try {{
         var btns = window.parent.document.querySelectorAll('button');
         for (var i = 0; i < btns.length; i++) {{
           if (btns[i].textContent.trim() === 'Auto Submit') {{
-            btns[i].click();
-            return;
+            btns[i].click(); return;
           }}
         }}
       }} catch(e) {{}}
-      // Fallback if click fails
       window.parent.location.reload();
       return;
     }}
-    rem--;
-    setTimeout(tick, 1000);
+    setTimeout(tick, 500);
   }}
   tick();
 }})();
@@ -295,18 +309,13 @@ elif st.session_state.exam_started and not st.session_state.exam_submitted:
                 st.session_state.exam_confirm_submit = False
                 st.rerun()
 
-    # Confirmation warning (shown when user clicked Finish/Submit with unanswered questions)
     if st.session_state.exam_confirm_submit:
         unanswered = total - len(answers)
         st.warning(f"⚠️ You still have **{unanswered}** unanswered question(s). Unanswered questions will be marked as incorrect. Do you want to submit anyway?")
-        conf_c1, conf_c2, conf_c3 = st.columns([1.5, 1.5, 5])
+        conf_c1, conf_c2 = st.columns([1.5, 8.5])
         with conf_c1:
             if st.button("✅ Yes, submit now", key="exam_confirm_yes", type="primary"):
                 st.session_state.exam_submitted = True
-                st.session_state.exam_confirm_submit = False
-                st.rerun()
-        with conf_c2:
-            if st.button("↩️ Continue", key="exam_confirm_no"):
                 st.session_state.exam_confirm_submit = False
                 st.rerun()
 
@@ -323,7 +332,7 @@ elif st.session_state.exam_started and not st.session_state.exam_submitted:
     body_col_left, body_col_right = st.columns([1.4, 8.6])
 
     with body_col_left:
-        st.markdown("**Questions**")
+        st.markdown("<p style='text-align: center; font-weight: bold; margin-bottom: 0.5rem;'>Questions</p>", unsafe_allow_html=True)
         with st.container(height=480):
             for idx in range(total):
                 ans_key = str(idx)
@@ -340,12 +349,11 @@ elif st.session_state.exam_started and not st.session_state.exam_submitted:
                 btn_type = "primary" if is_act else "secondary"
                 if st.button(lbl, key=f"cbt_mock_nav_{idx}", use_container_width=True, type=btn_type):
                     st.session_state.exam_current_idx = idx
+                    st.session_state.exam_confirm_submit = False
                     st.rerun()
 
 
     with body_col_right:
-        st.markdown('<div class="cbt-body">', unsafe_allow_html=True)
-
         # Stem
         st.markdown(f'<div class="cbt-stem-box">{q["question"]}</div>', unsafe_allow_html=True)
 
@@ -373,11 +381,11 @@ elif st.session_state.exam_started and not st.session_state.exam_submitted:
                 st.session_state.exam_answers = answers
                 st.rerun()
 
-        st.markdown('</div>', unsafe_allow_html=True)
+        pass
 
     # 4. CBT Bottom Controls Bar
     st.markdown('<div class="cbt-footer-bar">', unsafe_allow_html=True)
-    btm_c1, btm_c2, btm_c3, btm_c4 = st.columns([1.2, 1, 1, 1.2])
+    btm_c1, btm_c2, btm_c3 = st.columns([1.5, 1, 1])
     with btm_c1:
         is_flg = curr_idx in flags
         flag_lbl = "🚩 Unflag" if is_flg else "🏳️ Flag Question"
@@ -391,21 +399,13 @@ elif st.session_state.exam_started and not st.session_state.exam_submitted:
     with btm_c2:
         if st.button("< Back", key=f"cbt_mock_back_{curr_idx}", use_container_width=True, disabled=curr_idx == 0):
             st.session_state.exam_current_idx = curr_idx - 1
+            st.session_state.exam_confirm_submit = False
             st.rerun()
     with btm_c3:
         if st.button("Next >", key=f"cbt_mock_next_{curr_idx}", use_container_width=True, disabled=curr_idx == total - 1):
             st.session_state.exam_current_idx = curr_idx + 1
+            st.session_state.exam_confirm_submit = False
             st.rerun()
-    with btm_c4:
-        if st.button("📊 Submit Exam", key="cbt_mock_submit_btn", use_container_width=True, type="primary"):
-            unanswered = total - len(answers)
-            if unanswered > 0 and not st.session_state.exam_confirm_submit:
-                st.session_state.exam_confirm_submit = True
-                st.rerun()
-            else:
-                st.session_state.exam_submitted = True
-                st.session_state.exam_confirm_submit = False
-                st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
