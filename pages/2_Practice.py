@@ -90,108 +90,107 @@ if not st.session_state.practice_questions:
     tab_setup, tab_manage = st.tabs(["🎯 Start Practice", "📁 Manage Question Bank"])
     
     with tab_setup:
-        with st.container():
-            col_setup, col_info = st.columns([1.2, 1])
+        # ── Config form: topic, mode, difficulty, num questions ──────────────
+        col_setup, col_info = st.columns([1.2, 1])
 
-            with col_setup:
-                st.markdown(
-                    """<div class="cfa-card">
-                        <div class="section-header">⚙️ Configure Your Practice Session</div>
-                    """,
-                    unsafe_allow_html=True,
-                )
+        with col_setup:
+            st.markdown(
+                """<div class="cfa-card">
+                    <div class="section-header">⚙️ Configure Your Practice Session</div>
+                """,
+                unsafe_allow_html=True,
+            )
 
-                practice_mode = st.radio(
-                    "Practice Mode",
-                    ["🔌 Question Bank (Offline)", "🤖 AI-Generated (Online)"],
-                    horizontal=True,
-                    key="prac_mode"
-                )
-                use_bank_only = (practice_mode == "🔌 Question Bank (Offline)")
+            practice_mode = st.radio(
+                "Practice Mode",
+                ["🔌 Question Bank (Offline)", "🤖 AI-Generated (Online)"],
+                horizontal=True,
+                key="prac_mode"
+            )
+            use_bank_only = (practice_mode == "🔌 Question Bank (Offline)")
 
-                topic = st.selectbox("📚 Topic", TOPIC_NAMES, key="prac_topic")
-                subtopics_available = get_subtopics(topic)
-                selected_subtopics = st.multiselect(
-                    "🔍 Subtopics (optional — leave blank for all)",
-                    subtopics_available,
-                    key="prac_subtopics",
-                )
-                difficulty = st.select_slider(
-                    "⚡ Difficulty",
-                    options=DIFFICULTY_LEVELS,
-                    value="Medium",
-                    key="prac_difficulty",
-                )
-                num_questions = st.slider("📝 Number of Questions", min_value=3, max_value=15, value=5, key="prac_num")
+            topic = st.selectbox("📚 Topic", TOPIC_NAMES, key="prac_topic")
+            subtopics_available = get_subtopics(topic)
+            selected_subtopics = st.multiselect(
+                "🔍 Subtopics (optional — leave blank for all)",
+                subtopics_available,
+                key="prac_subtopics",
+            )
+            difficulty = st.select_slider(
+                "⚡ Difficulty",
+                options=DIFFICULTY_LEVELS,
+                value="Medium",
+                key="prac_difficulty",
+            )
+            num_questions = st.slider("📝 Number of Questions", min_value=3, max_value=15, value=5, key="prac_num")
 
-                st.markdown("</div>", unsafe_allow_html=True)
+            st.markdown("</div>", unsafe_allow_html=True)
 
-                # Check bank availability for offline mode (using pre-fetched stats)
-                topic_count = _bank_stats_pre.get(topic, 0)
-
-                if use_bank_only and topic_count == 0:
-                    st.warning(f"⚠️ Your local question bank is empty for **{topic}**.")
-                    st.info("Please click the **📁 Manage Question Bank** tab at the top to upload some custom questions first!")
-
-                if not (use_bank_only and topic_count == 0):
-                    if st.button("🚀 Generate Questions", use_container_width=True, type="primary", key="gen_btn"):
-                        spinner_msg = (
-                            f"📦 Loading {num_questions} questions from your local bank..."
-                            if use_bank_only
-                            else f"🤖 AI is crafting {num_questions} {difficulty} questions on **{topic}**..."
-                        )
-                        with st.spinner(spinner_msg):
-                            try:
-                                questions = generate_questions(
-                                    topic=topic,
-                                    subtopics=selected_subtopics or None,
-                                    difficulty=difficulty,
-                                    count=num_questions,
-                                    use_bank_only=use_bank_only,
-                                )
-                                if questions:
-                                    session_id = create_session(uid, topic, "practice")
-                                    st.session_state.practice_questions = questions
-                                    st.session_state.practice_answers = {}
-                                    st.session_state.practice_submitted = False
-                                    st.session_state.practice_session_id = session_id
-                                    st.session_state.practice_start_time = time.time()
-                                    st.session_state.practice_current_idx = 0
-                                    st.session_state.practice_flags = set()
-                                    st.session_state.practice_confirm_submit = False
-                                    st.session_state.practice_timer_secs = len(questions) * 90
-                                    st.session_state.practice_radio_versions = {}
-                                    st.rerun()
-                                else:
-                                    st.error("Failed to generate questions. Check if your question bank has questions for this topic.")
-                            except Exception as e:
-                                st.error(f"Error: {e}")
-
-            with col_info:
-                st.markdown(
-                    """
-                    <div class="cfa-card" style="height:100%;">
-                        <div class="section-header">💡 How Practice Modes Work</div>
-                        <strong style="color:#f1f5f9; display:block; margin-top:0.8rem;">🔌 Question Bank (Offline)</strong>
-                        <ul style="color:#94a3b8; font-size:0.85rem; line-height:1.6; padding-left:1.2rem; margin-top:0.3rem;">
-                            <li>Runs completely offline using the pre-loaded 720-question bank</li>
-                            <li>Bypasses AI API usage and keys entirely</li>
-                            <li>Great for standard prep and mock simulation</li>
-                        </ul>
-                        <strong style="color:#f1f5f9;">🤖 AI-Generated (Online)</strong>
-                        <ul style="color:#94a3b8; font-size:0.85rem; line-height:1.6; padding-left:1.2rem; margin-top:0.3rem;">
-                            <li>AI prioritizes weak areas based on your study history</li>
-                            <li>Fresh questions crafted for each session</li>
-                            <li>Integrates uploaded question examples for structure</li>
-                        </ul>
-                        <hr style="border-color:#334155; margin:0.8rem 0 !important;">
-                        <div style="color:#64748b; font-size:0.8rem;">
-                            🔑 <strong style="color:#94a3b8;">Tip:</strong> The 720Q question bank is pre-loaded by default. You can also upload your own questions to expand it!
-                        </div>
+        with col_info:
+            st.markdown(
+                """
+                <div class="cfa-card" style="height:100%;">
+                    <div class="section-header">💡 How Practice Modes Work</div>
+                    <strong style="color:#f1f5f9; display:block; margin-top:0.8rem;">🔌 Question Bank (Offline)</strong>
+                    <ul style="color:#94a3b8; font-size:0.85rem; line-height:1.6; padding-left:1.2rem; margin-top:0.3rem;">
+                        <li>Runs completely offline using the pre-loaded 720-question bank</li>
+                        <li>Bypasses AI API usage and keys entirely</li>
+                        <li>Great for standard prep and mock simulation</li>
+                    </ul>
+                    <strong style="color:#f1f5f9;">🤖 AI-Generated (Online)</strong>
+                    <ul style="color:#94a3b8; font-size:0.85rem; line-height:1.6; padding-left:1.2rem; margin-top:0.3rem;">
+                        <li>AI prioritizes weak areas based on your study history</li>
+                        <li>Fresh questions crafted for each session</li>
+                        <li>Integrates uploaded question examples for structure</li>
+                    </ul>
+                    <hr style="border-color:#334155; margin:0.8rem 0 !important;">
+                    <div style="color:#64748b; font-size:0.8rem;">
+                        🔑 <strong style="color:#94a3b8;">Tip:</strong> The 720Q question bank is pre-loaded by default. You can also upload your own questions to expand it!
                     </div>
-                    """,
-                    unsafe_allow_html=True,
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+        # ── Action area: warnings + Generate button — at tab level, NOT inside a column ──
+        topic_count = _bank_stats_pre.get(topic, 0)
+
+        if use_bank_only and topic_count == 0:
+            st.warning(f"⚠️ Your local question bank is empty for **{topic}**.")
+            st.info("Please click the **📁 Manage Question Bank** tab at the top to upload some custom questions first!")
+        else:
+            if st.button("🚀 Generate Questions", use_container_width=True, type="primary", key="gen_btn"):
+                spinner_msg = (
+                    f"📦 Loading {num_questions} questions from your local bank..."
+                    if use_bank_only
+                    else f"🤖 AI is crafting {num_questions} {difficulty} questions on **{topic}**..."
                 )
+                with st.spinner(spinner_msg):
+                    try:
+                        questions = generate_questions(
+                            topic=topic,
+                            subtopics=selected_subtopics or None,
+                            difficulty=difficulty,
+                            count=num_questions,
+                            use_bank_only=use_bank_only,
+                        )
+                        if questions:
+                            session_id = create_session(uid, topic, "practice")
+                            st.session_state.practice_questions = questions
+                            st.session_state.practice_answers = {}
+                            st.session_state.practice_submitted = False
+                            st.session_state.practice_session_id = session_id
+                            st.session_state.practice_start_time = time.time()
+                            st.session_state.practice_current_idx = 0
+                            st.session_state.practice_flags = set()
+                            st.session_state.practice_confirm_submit = False
+                            st.session_state.practice_timer_secs = len(questions) * 90
+                            st.session_state.practice_radio_versions = {}
+                            st.rerun()
+                        else:
+                            st.error("Failed to generate questions. Check if your question bank has questions for this topic.")
+                    except Exception as e:
+                        st.error(f"Error: {e}")
 
     with tab_manage:
         col_u1, col_u2 = st.columns([1.2, 1])
