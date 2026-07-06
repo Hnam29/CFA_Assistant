@@ -123,8 +123,10 @@ def generate_schedule(
     for s in completed_sessions[:10]:
         score_val = s.get("score")
         score_num = score_val if score_val is not None else 0.0
+        _raw_dt = s.get('started_at', '?')
+        _dt_str = _raw_dt.isoformat()[:10] if hasattr(_raw_dt, 'isoformat') else str(_raw_dt)[:10]
         recent_sessions.append(
-            f"- {s.get('started_at','?')[:10]}: {s['topic']} {s['session_type']} → {score_num:.0f}%"
+            f"- {_dt_str}: {s['topic']} {s['session_type']} → {score_num:.0f}%"
         )
 
     slots_str = ", ".join(free_slots) if free_slots else "flexible (no specific constraints)"
@@ -200,7 +202,8 @@ def generate_rule_based_schedule(
         topic = s["topic"]
         if s.get("started_at") and topic not in last_studied_map:
             try:
-                dt_str = s["started_at"][:10]
+                _raw = s["started_at"]
+                dt_str = _raw.isoformat()[:10] if hasattr(_raw, "isoformat") else str(_raw)[:10]
                 last_studied_map[topic] = datetime.strptime(dt_str, "%Y-%m-%d").date()
             except Exception:
                 pass

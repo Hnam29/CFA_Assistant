@@ -633,20 +633,40 @@ def delete_scheduled_session(session_id: int) -> None:
 def get_bank_questions(topic: str, subtopics: Optional[List[str]] = None,
                        difficulty: Optional[str] = None, limit: int = 5) -> List[Dict[str, Any]]:
     """Retrieve questions from the imported question bank (source = 'bank')."""
-    query = "SELECT * FROM questions WHERE source = 'bank' AND topic = ?"
-    params = [topic]
+    if is_postgres():
+        # PostgreSQL: use DISTINCT ON to deduplicate by question_text
+        query = """SELECT DISTINCT ON (question_text) *
+                   FROM questions WHERE source = 'bank' AND topic = ?"""
+        params = [topic]
 
-    if subtopics:
-        placeholders = ",".join("?" for _ in subtopics)
-        query += f" AND subtopic IN ({placeholders})"
-        params.extend(subtopics)
+        if subtopics:
+            placeholders = ",".join("?" for _ in subtopics)
+            query += f" AND subtopic IN ({placeholders})"
+            params.extend(subtopics)
 
-    if difficulty:
-        query += " AND difficulty = ?"
-        params.append(difficulty)
+        if difficulty:
+            query += " AND difficulty = ?"
+            params.append(difficulty)
 
-    query += " GROUP BY question_text ORDER BY RANDOM() LIMIT ?"
-    params.append(limit)
+        # Wrap in outer query for ORDER BY RANDOM() after DISTINCT ON
+        query = f"SELECT * FROM ({query}) sub ORDER BY RANDOM() LIMIT ?"
+        params.append(limit)
+    else:
+        # SQLite: GROUP BY question_text works fine
+        query = "SELECT * FROM questions WHERE source = 'bank' AND topic = ?"
+        params = [topic]
+
+        if subtopics:
+            placeholders = ",".join("?" for _ in subtopics)
+            query += f" AND subtopic IN ({placeholders})"
+            params.extend(subtopics)
+
+        if difficulty:
+            query += " AND difficulty = ?"
+            params.append(difficulty)
+
+        query += " GROUP BY question_text ORDER BY RANDOM() LIMIT ?"
+        params.append(limit)
 
     with get_connection() as conn:
         rows = conn.execute(query, params).fetchall()

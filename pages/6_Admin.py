@@ -183,7 +183,8 @@ else:
                 city = u.get("city") or "—"
                 is_onboarded = bool(u.get("onboarding_done"))
                 plan = u.get("subscription_plan") or "free"
-                created = (u.get("created_at") or "")[:10]
+                created_raw = u.get("created_at") or ""
+                created = created_raw.isoformat()[:10] if hasattr(created_raw, "isoformat") else str(created_raw)[:10]
 
                 # Avatar initials
                 initials = "".join(w[0].upper() for w in full_name.split()[:2]) or "?"
@@ -260,11 +261,13 @@ else:
                             for s in recent_sessions:
                                 score_val = s.get("score") or 0
                                 s_color = "#10b981" if score_val >= 70 else "#f59e0b" if score_val >= 50 else "#ef4444"
+                                raw_dt = s.get("started_at") or ""
+                                started_str = raw_dt.isoformat()[:10] if hasattr(raw_dt, "isoformat") else str(raw_dt)[:10]
                                 st.markdown(
                                     f"""<div style="display:flex;justify-content:space-between;
                                                     padding:4px 0;border-bottom:1px solid #1e293b;
                                                     font-size:0.78rem;">
-                                        <span style="color:#94a3b8;">{(s.get('started_at') or '')[:10]} · {s.get('topic','')} ({s.get('session_type','')})</span>
+                                        <span style="color:#94a3b8;">{started_str} · {s.get('topic','')} ({s.get('session_type','')})</span>
                                         <strong style="color:{s_color};">{score_val:.0f}%</strong>
                                     </div>""",
                                     unsafe_allow_html=True,

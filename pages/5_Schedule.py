@@ -243,7 +243,10 @@ today_str = date.today().isoformat()
 
 # Auto-mark overdue pending sessions as 'skipped'
 for s in all_by_status["pending"]:
-    if s.get("scheduled_date", today_str) < today_str:
+    # scheduled_date may be a date object (Postgres) or string (SQLite)
+    raw_date = s.get("scheduled_date", today_str)
+    session_date_str = raw_date.isoformat() if hasattr(raw_date, "isoformat") else str(raw_date)[:10]
+    if session_date_str < today_str:
         try:
             from database.db import get_connection
             with get_connection() as conn:
@@ -320,8 +323,10 @@ for col_idx, col_def in enumerate(COLUMNS):
                 reason = s.get("reason", "") or ""
 
                 try:
-                    d = datetime.strptime(s["scheduled_date"][:10], "%Y-%m-%d")
-                    is_today = s["scheduled_date"][:10] == today_str
+                    raw_d = s.get("scheduled_date", "")
+                    date_str = raw_d.isoformat() if hasattr(raw_d, "isoformat") else str(raw_d)[:10]
+                    d = datetime.strptime(date_str, "%Y-%m-%d")
+                    is_today = date_str == today_str
                     date_label = ("🔥 Today" if is_today else d.strftime("%a, %b %d"))
                 except Exception:
                     date_label = s.get("scheduled_date", "")
