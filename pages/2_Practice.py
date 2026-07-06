@@ -84,13 +84,38 @@ st.markdown(
 # SETUP PANEL (shown when no active session)
 # ─────────────────────────────────────────────────────────────────
 if not st.session_state.practice_questions:
-    # Fetch bank stats once, outside of tab/column context to avoid layout corruption on rerun
-    _bank_stats_pre = get_bank_stats()
+    # ── Custom tab navigation — avoids st.tabs() rendering bug on rerun ──────
+    if "prac_active_tab" not in st.session_state:
+        st.session_state.prac_active_tab = "setup"
 
-    tab_setup, tab_manage = st.tabs(["🎯 Start Practice", "📁 Manage Question Bank"])
-    
-    with tab_setup:
-        # ── Config form: topic, mode, difficulty, num questions ──────────────
+    # Fetch bank stats once before rendering any tab content
+    _bank_stats = get_bank_stats()
+
+    # Tab bar buttons
+    tab_col1, tab_col2, tab_col_spacer = st.columns([1.6, 2, 6])
+    with tab_col1:
+        if st.button(
+            "🎯 Start Practice",
+            use_container_width=True,
+            type="primary" if st.session_state.prac_active_tab == "setup" else "secondary",
+            key="nav_tab_setup",
+        ):
+            st.session_state.prac_active_tab = "setup"
+            st.rerun()
+    with tab_col2:
+        if st.button(
+            "📁 Manage Question Bank",
+            use_container_width=True,
+            type="primary" if st.session_state.prac_active_tab == "manage" else "secondary",
+            key="nav_tab_manage",
+        ):
+            st.session_state.prac_active_tab = "manage"
+            st.rerun()
+
+    st.markdown("<hr style='margin:0.4rem 0 1.2rem 0; border-color:#334155;'>", unsafe_allow_html=True)
+
+    # ── TAB: Start Practice ──────────────────────────────────────────────────
+    if st.session_state.prac_active_tab == "setup":
         col_setup, col_info = st.columns([1.2, 1])
 
         with col_setup:
@@ -100,14 +125,13 @@ if not st.session_state.practice_questions:
                 """,
                 unsafe_allow_html=True,
             )
-
             practice_mode = st.radio(
                 "Practice Mode",
                 ["🔌 Question Bank (Offline)", "🤖 AI-Generated (Online)"],
                 horizontal=True,
-                key="prac_mode"
+                key="prac_mode",
             )
-            use_bank_only = (practice_mode == "🔌 Question Bank (Offline)")
+            use_bank_only = practice_mode == "🔌 Question Bank (Offline)"
 
             topic = st.selectbox("📚 Topic", TOPIC_NAMES, key="prac_topic")
             subtopics_available = get_subtopics(topic)
@@ -123,7 +147,6 @@ if not st.session_state.practice_questions:
                 key="prac_difficulty",
             )
             num_questions = st.slider("📝 Number of Questions", min_value=3, max_value=15, value=5, key="prac_num")
-
             st.markdown("</div>", unsafe_allow_html=True)
 
         with col_info:
@@ -152,12 +175,11 @@ if not st.session_state.practice_questions:
                 unsafe_allow_html=True,
             )
 
-        # ── Action area: warnings + Generate button — at tab level, NOT inside a column ──
-        topic_count = _bank_stats_pre.get(topic, 0)
-
+        # Generate button — rendered at top level, completely outside any column/tab context
+        topic_count = _bank_stats.get(topic, 0)
         if use_bank_only and topic_count == 0:
             st.warning(f"⚠️ Your local question bank is empty for **{topic}**.")
-            st.info("Please click the **📁 Manage Question Bank** tab at the top to upload some custom questions first!")
+            st.info("Switch to the **📁 Manage Question Bank** tab above to upload questions first.")
         else:
             if st.button("🚀 Generate Questions", use_container_width=True, type="primary", key="gen_btn"):
                 spinner_msg = (
@@ -192,7 +214,8 @@ if not st.session_state.practice_questions:
                     except Exception as e:
                         st.error(f"Error: {e}")
 
-    with tab_manage:
+    # ── TAB: Manage Question Bank ────────────────────────────────────────────
+    elif st.session_state.prac_active_tab == "manage":
         col_u1, col_u2 = st.columns([1.2, 1])
         with col_u1:
             st.markdown(
@@ -203,7 +226,6 @@ if not st.session_state.practice_questions:
             )
             st.write("Upload an Excel (`.xlsx`) or CSV (`.csv`) file to add more custom questions. By default, the system is pre-loaded with the 720-question bank.")
 
-            
             # Built-in template Excel download button
             template_data = {
                 "Topic": ["Ethical and Professional Standards"],
@@ -217,7 +239,7 @@ if not st.session_state.practice_questions:
                 "Explanation": ["Standard I(B) Independence and Objectivity states that gifts must be disclosed and approved. Accepting them without informing the employer violates duty to employer."]
             }
             template_df = pd.DataFrame(template_data)
-            
+
             from io import BytesIO
             excel_buffer = BytesIO()
             excel_ready = False
@@ -252,14 +274,14 @@ if not st.session_state.practice_questions:
                     help="Download a CSV template with pre-configured headers. (Excel engine openpyxl is missing).",
                     use_container_width=True
                 )
-            
+
             st.markdown("<br>", unsafe_allow_html=True)
             uploaded_file = st.file_uploader(
                 "Select Excel or CSV File",
                 type=["xlsx", "csv"],
                 key="bank_file_uploader"
             )
-            
+
             if "import_success" in st.session_state:
                 st.success(st.session_state.pop("import_success"))
 
@@ -267,20 +289,16 @@ if not st.session_state.practice_questions:
                 st.info(f"📄 File loaded: **{uploaded_file.name}**")
                 if st.button("🚀 Confirm and Import Questions", key="confirm_import_btn", type="primary", use_container_width=True):
                     try:
-                        # Read the file
                         if uploaded_file.name.endswith(".csv"):
                             df = pd.read_csv(uploaded_file)
                         else:
                             try:
                                 df = pd.read_excel(uploaded_file)
                             except ImportError:
-                                st.error("❌ Excel engine not available. Please install 'openpyxl' (e.g. run `pip install openpyxl`) or upload the file as a CSV (`.csv`) instead.")
+                                st.error("❌ Excel engine not available. Please install 'openpyxl' or upload as CSV.")
                                 st.stop()
-                        
-                        # Normalize columns to lowercase and strip whitespace/underscores for flexible matching
+
                         norm_cols = {c.lower().replace(" ", "").replace("_", ""): c for c in df.columns}
-                        
-                        # Required fields
                         required_fields = {
                             "topic": ["topic"],
                             "subtopic": ["subtopic"],
@@ -292,8 +310,6 @@ if not st.session_state.practice_questions:
                             "correctanswer": ["correctanswer", "correct"],
                             "explanation": ["explanation", "explain"]
                         }
-                        
-                        # Find mapped columns
                         mapped_cols = {}
                         missing_fields = []
                         for key, aliases in required_fields.items():
@@ -304,16 +320,14 @@ if not st.session_state.practice_questions:
                                     break
                             if found_col is not None:
                                 mapped_cols[key] = found_col
-                            elif key != "subtopic":  # Subtopic is optional
+                            elif key != "subtopic":
                                 missing_fields.append(key)
-                        
+
                         if missing_fields:
-                            st.error(f"❌ Missing required columns: {', '.join(missing_fields)}. Please structure your file correctly.")
+                            st.error(f"❌ Missing required columns: {', '.join(missing_fields)}.")
                         else:
                             import_count = 0
-                            # Validate values and insert
                             for index, row in df.iterrows():
-                                # Extract fields
                                 topic_val = normalize_topic_name(str(row[mapped_cols["topic"]]).strip())
                                 subtopic_val = str(row[mapped_cols["subtopic"]]).strip() if "subtopic" in mapped_cols else ""
                                 diff_val = str(row[mapped_cols["difficulty"]]).strip().capitalize()
@@ -323,33 +337,22 @@ if not st.session_state.practice_questions:
                                 oc_val = str(row[mapped_cols["optionc"]]).strip()
                                 ans_val = str(row[mapped_cols["correctanswer"]]).strip().upper()
                                 exp_val = str(row[mapped_cols["explanation"]]).strip()
-                                
-                                # Clean/Validate Correct Answer
                                 if ans_val not in ["A", "B", "C"]:
                                     continue
                                 if diff_val not in ["Easy", "Medium", "Hard"]:
                                     diff_val = "Medium"
-                                    
                                 save_question(
-                                    topic=topic_val,
-                                    subtopic=subtopic_val,
-                                    difficulty=diff_val,
-                                    question_text=q_val,
-                                    option_a=oa_val,
-                                    option_b=ob_val,
-                                    option_c=oc_val,
-                                    correct_answer=ans_val,
-                                    explanation=exp_val,
-                                    source="bank"
+                                    topic=topic_val, subtopic=subtopic_val, difficulty=diff_val,
+                                    question_text=q_val, option_a=oa_val, option_b=ob_val, option_c=oc_val,
+                                    correct_answer=ans_val, explanation=exp_val, source="bank"
                                 )
                                 import_count += 1
-                                
                             st.session_state["import_success"] = f"🎉 Successfully imported {import_count} questions into the local bank!"
                             st.rerun()
                     except Exception as e:
                         st.error(f"❌ Error parsing file: {e}")
             st.markdown("</div>", unsafe_allow_html=True)
-            
+
         with col_u2:
             st.markdown(
                 """<div class="cfa-card">
@@ -357,11 +360,9 @@ if not st.session_state.practice_questions:
                 """,
                 unsafe_allow_html=True,
             )
-            stats = _bank_stats_pre
-            if stats:
-                for t, count in stats.items():
+            if _bank_stats:
+                for t, count in _bank_stats.items():
                     st.markdown(f"- **{t}**: {count} questions")
-                
                 st.markdown("---")
                 if st.button("🗑️ Clear Local Question Bank", type="secondary", use_container_width=True, key="clear_bank_btn"):
                     delete_bank_questions()
@@ -369,7 +370,7 @@ if not st.session_state.practice_questions:
                     st.rerun()
             else:
                 st.info("Your local question bank is currently empty.")
-            
+
             st.markdown(
                 """
                 <div style="background:#1e293b; border:1px solid #334155; border-radius:8px; padding:0.75rem; margin-top:1rem; font-size:0.8rem; color:#94a3b8;">
@@ -380,6 +381,9 @@ if not st.session_state.practice_questions:
                 unsafe_allow_html=True
             )
             st.markdown("</div>", unsafe_allow_html=True)
+
+
+
 
 # ─────────────────────────────────────────────────────────────────
 # ACTIVE PRACTICE SESSION (CFA CBT Real Exam UI Simulation)
