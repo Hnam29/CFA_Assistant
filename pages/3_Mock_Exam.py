@@ -17,6 +17,10 @@ from database.db import (
     get_topic_performance, get_curriculum_weights,
     is_premium_user,
 )
+try:
+    from database.db import save_session_state
+except ImportError:
+    def save_session_state(sid, data): pass
 from utils.auth import is_logged_in, get_current_user, render_auth_page
 from utils.cfa_topics import TOPIC_NAMES, TOPIC_WEIGHTS, CFA_TOPICS
 from utils.charts import topic_bar_chart
@@ -340,7 +344,6 @@ elif st.session_state.exam_started and not st.session_state.exam_submitted:
                     "elapsed_secs": elapsed_s,
                     "exam_duration_mins": st.session_state.exam_duration_mins,
                 }
-                from database.db import save_session_state
                 save_session_state(st.session_state.exam_session_id, state_data)
                 
                 # Clear session state keys

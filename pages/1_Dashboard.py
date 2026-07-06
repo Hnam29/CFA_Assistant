@@ -13,8 +13,13 @@ import streamlit as st
 from database.db import (
     init_db, get_topic_performance, get_user_sessions,
     get_upcoming_sessions, is_onboarding_done, get_user_profile,
-    get_subtopic_performance, get_pending_sessions, discard_session,
+    get_subtopic_performance,
 )
+try:
+    from database.db import get_pending_sessions, discard_session
+except ImportError:
+    def get_pending_sessions(uid): return []
+    def discard_session(sid): pass
 from utils.auth import is_logged_in, get_current_user, render_auth_page
 from utils.cfa_topics import TOPIC_NAMES, CFA_TOPICS, TOPIC_WEIGHTS
 from utils.charts import radar_chart, score_timeline, topic_bar_chart
@@ -85,7 +90,12 @@ st.markdown(
 )
 
 # ── Pending / Saved Sessions ─────────────────────────────────────
-pending_sessions = get_pending_sessions(uid)
+try:
+    import time
+    pending_sessions = get_pending_sessions(uid)
+except Exception:
+    pending_sessions = []
+
 if pending_sessions:
     st.markdown(
         """<div class="cfa-card" style="border-color:#3b82f6; background:rgba(59,130,246,0.05); margin-bottom:1.5rem; padding: 1.2rem;">
@@ -96,20 +106,19 @@ if pending_sessions:
         </div>""",
         unsafe_allow_html=True
     )
-    import time
     for ps in pending_sessions:
         ps_id = ps["id"]
         ps_topic = ps["topic"]
         ps_type = ps["session_type"]
         started_time = ps["started_at"]
-        
+
         display_type = "Practice" if ps_type.lower() in ("practice", "mixed") else "Mock Exam"
-        
+
         col_ps_info, col_ps_actions = st.columns([7.5, 2.5])
         with col_ps_info:
             st.markdown(
                 f"""<div style="font-size:0.95rem; color:#f1f5f9; padding-top: 0.3rem;">
-                    <strong>{display_type}</strong> — Topic: <span style="color:#60a5fa; font-weight: 600;">{ps_topic}</span> 
+                    <strong>{display_type}</strong> — Topic: <span style="color:#60a5fa; font-weight: 600;">{ps_topic}</span>
                     <span style="font-size:0.8rem; color:#64748b;">(Started: {started_time})</span>
                 </div>""",
                 unsafe_allow_html=True
@@ -145,7 +154,10 @@ if pending_sessions:
                         st.switch_page("pages/3_Mock_Exam.py")
             with act_col2:
                 if st.button("🗑️ Discard", key=f"discard_{ps_id}", use_container_width=True):
-                    discard_session(ps_id)
+                    try:
+                        discard_session(ps_id)
+                    except Exception:
+                        pass
                     st.toast("Session discarded.")
                     st.rerun()
     st.markdown("<hr style='border-color:#334155; margin: 1.5rem 0;'>", unsafe_allow_html=True)
