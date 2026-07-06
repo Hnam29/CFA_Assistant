@@ -142,6 +142,32 @@ if not st.session_state.exam_started:
                     if len(all_qs) >= num_q:
                         break
 
+                # Ensure we have EXACTLY num_q questions (no rounding deficits or generation gaps)
+                if 0 < len(all_qs) < num_q:
+                    deficit = num_q - len(all_qs)
+                    sorted_topics = sorted(weights.keys(), key=lambda t: weights[t], reverse=True)
+                    seen_texts = {q["question"].strip().lower() for q in all_qs if "question" in q}
+                    for topic in sorted_topics:
+                        if deficit <= 0:
+                            break
+                        try:
+                            extra_qs = generate_questions(
+                                topic=topic,
+                                difficulty="Medium",
+                                count=deficit + 10,
+                                use_bank_only=True
+                            )
+                            for eq in extra_qs:
+                                eq_text = eq["question"].strip().lower()
+                                if eq_text not in seen_texts:
+                                    seen_texts.add(eq_text)
+                                    all_qs.append(eq)
+                                    deficit -= 1
+                                    if deficit <= 0:
+                                        break
+                        except Exception:
+                            continue
+
             if not all_qs:
                 st.error("Failed to generate exam questions. Check your question bank or API key.")
             else:
@@ -302,15 +328,39 @@ elif st.session_state.exam_started and not st.session_state.exam_submitted:
             height=0,
         )
     with top_col2:
-        if st.button("Finish Test", key="cbt_exam_finish_top", use_container_width=True, type="primary"):
-            unanswered = total - len(answers)
-            if unanswered > 0 and not st.session_state.exam_confirm_submit:
-                st.session_state.exam_confirm_submit = True
+        btn_c1, btn_c2 = st.columns(2)
+        with btn_c1:
+            if st.button("⏸️ Pause", key="cbt_exam_pause_top", use_container_width=True, help="Save progress and return to dashboard"):
+                elapsed_s = time.time() - st.session_state.exam_start_time
+                state_data = {
+                    "questions": questions,
+                    "answers": answers,
+                    "current_idx": curr_idx,
+                    "flags": list(flags),
+                    "elapsed_secs": elapsed_s,
+                    "exam_duration_mins": st.session_state.exam_duration_mins,
+                }
+                from database.db import save_session_state
+                save_session_state(st.session_state.exam_session_id, state_data)
+                
+                # Clear session state keys
+                for k in ["exam_questions", "exam_answers", "exam_started", "exam_submitted", "exam_start_time", "exam_duration_mins", "exam_session_id", "exam_current_idx", "exam_flags", "exam_confirm_submit"]:
+                    if k in st.session_state:
+                        del st.session_state[k]
+                st.toast("Progress saved!")
+                st.switch_page("pages/1_Dashboard.py")
                 st.rerun()
-            else:
-                st.session_state.exam_submitted = True
-                st.session_state.exam_confirm_submit = False
-                st.rerun()
+
+        with btn_c2:
+            if st.button("Finish", key="cbt_exam_finish_top", use_container_width=True, type="primary"):
+                unanswered = total - len(answers)
+                if unanswered > 0 and not st.session_state.exam_confirm_submit:
+                    st.session_state.exam_confirm_submit = True
+                    st.rerun()
+                else:
+                    st.session_state.exam_submitted = True
+                    st.session_state.exam_confirm_submit = False
+                    st.rerun()
 
     if st.session_state.exam_confirm_submit:
         unanswered = total - len(answers)

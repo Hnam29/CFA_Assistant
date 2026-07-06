@@ -225,6 +225,7 @@ def init_db() -> None:
             "ALTER TABLE scheduled_sessions ADD COLUMN completed_session_id INTEGER",
             "ALTER TABLE scheduled_sessions ADD COLUMN subtopic TEXT",
             "ALTER TABLE users ADD COLUMN phone TEXT",
+            "ALTER TABLE study_sessions ADD COLUMN session_state TEXT",
         ]
         for _m in _migrations:
             try:
@@ -934,4 +935,46 @@ def delete_user(user_id: int) -> None:
             except Exception:
                 pass
         conn.execute("DELETE FROM users WHERE id=?", (user_id,))
+
+
+def save_session_state(session_id: int, state_data: dict) -> None:
+    """Save/update the current state of an active in-progress session (serialized as JSON)."""
+    import json
+    state_str = json.dumps(state_data)
+    with get_connection() as conn:
+        conn.execute(
+            "UPDATE study_sessions SET session_state = ? WHERE id = ?",
+            (state_str, session_id)
+        )
+
+
+def get_pending_sessions(user_id: int) -> list:
+    """Retrieve all pending, incomplete sessions that have saved states."""
+    import json
+    with get_connection() as conn:
+        rows = conn.execute(
+            "SELECT id, topic, session_type, started_at, session_state FROM study_sessions WHERE user_id = ? AND completed = 0 AND session_state IS NOT NULL",
+            (user_id,)
+        ).fetchall()
+        result = []
+        for r in rows:
+            try:
+                state_dict = json.loads(r["session_state"])
+                result.append({
+                    "id": r["id"],
+                    "topic": r["topic"],
+                    "session_type": r["session_type"],
+                    "started_at": r["started_at"],
+                    "state": state_dict
+                })
+            except Exception:
+                continue
+        return result
+
+
+def discard_session(session_id: int) -> None:
+    """Discard a pending session (delete it from the study_sessions table)."""
+    with get_connection() as conn:
+        conn.execute("DELETE FROM user_answers WHERE session_id = ?", (session_id,))
+        conn.execute("DELETE FROM study_sessions WHERE id = ?", (session_id,))
 

@@ -13,7 +13,7 @@ import streamlit as st
 from database.db import (
     init_db, get_topic_performance, get_user_sessions,
     get_upcoming_sessions, is_onboarding_done, get_user_profile,
-    get_subtopic_performance,
+    get_subtopic_performance, get_pending_sessions, discard_session,
 )
 from utils.auth import is_logged_in, get_current_user, render_auth_page
 from utils.cfa_topics import TOPIC_NAMES, CFA_TOPICS, TOPIC_WEIGHTS
@@ -83,6 +83,72 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
+
+# ── Pending / Saved Sessions ─────────────────────────────────────
+pending_sessions = get_pending_sessions(uid)
+if pending_sessions:
+    st.markdown(
+        """<div class="cfa-card" style="border-color:#3b82f6; background:rgba(59,130,246,0.05); margin-bottom:1.5rem; padding: 1.2rem;">
+            <h4 style="color:#60a5fa; margin:0 0 0.5rem 0;">🔄 Saved Sessions In Progress</h4>
+            <p style="color:#94a3b8; font-size:0.85rem; margin:0 0 1rem 0;">
+                You have saved/paused sessions. You can resume them or discard them.
+            </p>
+        </div>""",
+        unsafe_allow_html=True
+    )
+    import time
+    for ps in pending_sessions:
+        ps_id = ps["id"]
+        ps_topic = ps["topic"]
+        ps_type = ps["session_type"]
+        started_time = ps["started_at"]
+        
+        display_type = "Practice" if ps_type.lower() in ("practice", "mixed") else "Mock Exam"
+        
+        col_ps_info, col_ps_actions = st.columns([7.5, 2.5])
+        with col_ps_info:
+            st.markdown(
+                f"""<div style="font-size:0.95rem; color:#f1f5f9; padding-top: 0.3rem;">
+                    <strong>{display_type}</strong> — Topic: <span style="color:#60a5fa; font-weight: 600;">{ps_topic}</span> 
+                    <span style="font-size:0.8rem; color:#64748b;">(Started: {started_time})</span>
+                </div>""",
+                unsafe_allow_html=True
+            )
+        with col_ps_actions:
+            act_col1, act_col2 = st.columns(2)
+            with act_col1:
+                if st.button("▶️ Resume", key=f"resume_{ps_id}", use_container_width=True, type="primary"):
+                    state = ps["state"]
+                    if ps_type.lower() in ("practice", "mixed"):
+                        st.session_state.practice_questions = state["questions"]
+                        st.session_state.practice_answers = state["answers"]
+                        st.session_state.practice_submitted = False
+                        st.session_state.practice_session_id = ps_id
+                        st.session_state.practice_start_time = time.time() - state.get("elapsed_secs", 0)
+                        st.session_state.practice_current_idx = state.get("current_idx", 0)
+                        st.session_state.practice_flags = set(state.get("flags", []))
+                        st.session_state.practice_timer_secs = state.get("practice_timer_secs", len(state["questions"]) * 90)
+                        st.session_state.practice_confirm_submit = False
+                        st.session_state.practice_radio_versions = {}
+                        st.switch_page("pages/2_Practice.py")
+                    else:
+                        st.session_state.exam_questions = state["questions"]
+                        st.session_state.exam_answers = state["answers"]
+                        st.session_state.exam_started = True
+                        st.session_state.exam_submitted = False
+                        st.session_state.exam_session_id = ps_id
+                        st.session_state.exam_start_time = time.time() - state.get("elapsed_secs", 0)
+                        st.session_state.exam_current_idx = state.get("current_idx", 0)
+                        st.session_state.exam_flags = set(state.get("flags", []))
+                        st.session_state.exam_duration_mins = state.get("exam_duration_mins", 30)
+                        st.session_state.exam_confirm_submit = False
+                        st.switch_page("pages/3_Mock_Exam.py")
+            with act_col2:
+                if st.button("🗑️ Discard", key=f"discard_{ps_id}", use_container_width=True):
+                    discard_session(ps_id)
+                    st.toast("Session discarded.")
+                    st.rerun()
+    st.markdown("<hr style='border-color:#334155; margin: 1.5rem 0;'>", unsafe_allow_html=True)
 
 # ── KPI row ───────────────────────────────────────────────────────
 total_sessions = len([s for s in sessions if s["completed"]])

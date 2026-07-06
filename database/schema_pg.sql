@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS study_sessions (
     correct_q     INTEGER,
     duration_mins REAL,
     completed     INTEGER DEFAULT 0,
+    session_state TEXT,
     started_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

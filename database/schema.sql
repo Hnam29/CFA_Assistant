@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS study_sessions (
     correct_q     INTEGER,
     duration_mins REAL,
     completed     INTEGER DEFAULT 0,
+    session_state TEXT,
     started_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id)
 );
