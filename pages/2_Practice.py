@@ -11,6 +11,7 @@ load_dotenv()
 
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 from database.db import (
     init_db, create_session, complete_session,
     save_question, save_answer, upsert_topic_performance,
@@ -440,7 +441,6 @@ elif not st.session_state.practice_submitted:
         # The key includes the start_time so the component is only re-created on new sessions.
         epoch_key = int(st.session_state.practice_start_time)
         deadline_epoch = int(st.session_state.practice_start_time) + int(timer_total)
-        import streamlit.components.v1 as components
         components.html(
             f"""<script>
 (function() {{
@@ -474,7 +474,6 @@ elif not st.session_state.practice_submitted:
 }})();
 </script>""",
             height=0,
-            key=f"prac_timer_{epoch_key}",
         )
     with top_col2:
         if st.button("Finish Test", key="cbt_finish_top", use_container_width=True, type="primary"):

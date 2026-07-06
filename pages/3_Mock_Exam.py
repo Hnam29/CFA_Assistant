@@ -71,18 +71,6 @@ st.markdown(
 # SETUP
 # ─────────────────────────────────────────────────────────────────
 if not st.session_state.exam_started:
-    # ── Premium Gate ────────────────────────────────────────────────
-    if not is_premium_user(uid):
-        st.markdown(
-            """<div style="background:#0f172a;border:1px solid #6366f1;border-radius:14px;padding:2.5rem;text-align:center;">
-            <div style="font-size:3rem;">🔒</div>
-            <h2 style="color:#f1f5f9;font-size:1.5rem;margin:0.5rem 0;">Premium Feature</h2>
-            <p style="color:#94a3b8;max-width:480px;margin:0 auto 1.5rem;">Mock Exams require a <strong style="color:#818cf8;">Premium account</strong>.<br>Upgrade or ask your administrator for access.</p>
-            <p style="font-size:0.8rem;color:#64748b;">💡 Practice sessions (up to 5 questions) are available on the free plan.</p>
-            </div>""",
-            unsafe_allow_html=True,
-        )
-        st.stop()
 
     col_l, col_r = st.columns([1.2, 1])
 
