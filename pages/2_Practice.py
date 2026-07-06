@@ -84,6 +84,9 @@ st.markdown(
 # SETUP PANEL (shown when no active session)
 # ─────────────────────────────────────────────────────────────────
 if not st.session_state.practice_questions:
+    # Fetch bank stats once, outside of tab/column context to avoid layout corruption on rerun
+    _bank_stats_pre = get_bank_stats()
+
     tab_setup, tab_manage = st.tabs(["🎯 Start Practice", "📁 Manage Question Bank"])
     
     with tab_setup:
@@ -123,9 +126,8 @@ if not st.session_state.practice_questions:
 
                 st.markdown("</div>", unsafe_allow_html=True)
 
-                # Check bank availability for offline mode
-                stats = get_bank_stats()
-                topic_count = stats.get(topic, 0)
+                # Check bank availability for offline mode (using pre-fetched stats)
+                topic_count = _bank_stats_pre.get(topic, 0)
 
                 if use_bank_only and topic_count == 0:
                     st.warning(f"⚠️ Your local question bank is empty for **{topic}**.")
@@ -201,6 +203,7 @@ if not st.session_state.practice_questions:
                 unsafe_allow_html=True,
             )
             st.write("Upload an Excel (`.xlsx`) or CSV (`.csv`) file to add more custom questions. By default, the system is pre-loaded with the 720-question bank.")
+
             
             # Built-in template Excel download button
             template_data = {
@@ -355,7 +358,7 @@ if not st.session_state.practice_questions:
                 """,
                 unsafe_allow_html=True,
             )
-            stats = get_bank_stats()
+            stats = _bank_stats_pre
             if stats:
                 for t, count in stats.items():
                     st.markdown(f"- **{t}**: {count} questions")
