@@ -14,6 +14,9 @@ from database.db import (
     init_db, get_topic_performance, get_user_sessions,
     get_upcoming_sessions, is_onboarding_done, get_user_profile,
     get_subtopic_performance,
+    get_user_streak, get_user_engagement_score,
+    get_user_notifications, mark_notifications_read,
+    get_user_activity_heatmap,
 )
 try:
     from database.db import get_pending_sessions, discard_session
@@ -84,6 +87,104 @@ st.markdown(
             CFA Level {profile['cfa_level'] if profile else 1} ·
             {date.today().strftime("%B %d, %Y")}
         </p>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
+# ══ Streak & Engagement Widget ═════════════════════════════════════
+_streak   = get_user_streak(uid)
+_engage   = get_user_engagement_score(uid)
+_notifs   = get_user_notifications(uid)
+_unread   = [n for n in _notifs if not n.get("is_read")]
+
+cur_streak   = _streak["current_streak"]
+longest_str  = _streak["longest_streak"]
+last_active  = _streak.get("last_active_date") or "—"
+eng_score    = _engage["score"]
+eng_level    = _engage["level"]
+eng_s30      = _engage["sessions_30d"]
+eng_avg      = _engage["avg_score"]
+
+# Level colors
+level_colors = {
+    "Elite":    ("#f59e0b", "rgba(245,158,11,0.15)"),
+    "Advanced": ("#6366f1", "rgba(99,102,241,0.15)"),
+    "Focused":  ("#06b6d4", "rgba(6,182,212,0.15)"),
+    "Steady":   ("#10b981", "rgba(16,185,129,0.15)"),
+    "Beginner": ("#64748b", "rgba(100,116,139,0.15)"),
+}
+lvl_color, lvl_bg = level_colors.get(eng_level, ("#64748b", "rgba(100,116,139,0.15)"))
+
+# Streak flame emoji logic
+if cur_streak >= 30:   flame = "🔥🔥🔥"
+elif cur_streak >= 14: flame = "🔥🔥"
+elif cur_streak >= 3:  flame = "🔥"
+else:                  flame = "❄️"
+
+# Last 14 days activity dots
+from datetime import date as _d, timedelta as _td
+_activity_hm = {}
+try:
+    _activity_hm = get_user_activity_heatmap(uid)
+except Exception:
+    pass
+
+dots_html = ""
+for i in range(13, -1, -1):
+    d = (_d.today() - _td(days=i)).isoformat()
+    has = _activity_hm.get(d, 0) > 0
+    bg = "#22c55e" if has else "#1e293b"
+    dots_html += f'<span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:{bg};margin:1px;"></span>'
+
+# Notification banner
+notif_html = ""
+if _unread:
+    mark_notifications_read(uid)
+    msgs_preview = " &nbsp;|&nbsp; ".join(
+        f'<em>{n["message"][:60]}{"..." if len(n["message"]) > 60 else ""}</em>' for n in _unread[:2]
+    )
+    notif_html = (
+        f'<div style="background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);'
+        f'border-radius:8px;padding:0.5rem 1rem;margin-top:0.7rem;font-size:0.8rem;color:#818cf8;">'
+        f'📩 <strong>{len(_unread)} new message{"s" if len(_unread) > 1 else ""} from admin:</strong> {msgs_preview}'
+        f'</div>'
+    )
+
+st.markdown(
+    f"""
+    <div style="background:linear-gradient(135deg,#0f172a,#1e293b);border:1px solid #334155;
+                border-radius:16px;padding:1.2rem 1.5rem;margin-bottom:1.8rem;">
+        <div style="display:flex;flex-wrap:wrap;gap:1.5rem;align-items:center;">
+            <div style="text-align:center;min-width:80px;">
+                <div style="font-size:2.4rem;line-height:1;">{flame}</div>
+                <div style="font-size:1.9rem;font-weight:900;color:#f59e0b;line-height:1.1;">{cur_streak}</div>
+                <div style="font-size:0.7rem;color:#64748b;margin-top:1px;">Day Streak</div>
+            </div>
+            <div style="width:1px;height:60px;background:#334155;"></div>
+            <div style="text-align:center;min-width:80px;">
+                <div style="font-size:1.6rem;font-weight:900;color:#94a3b8;">{longest_str}</div>
+                <div style="font-size:0.7rem;color:#64748b;">Best Streak</div>
+                <div style="font-size:0.65rem;color:#475569;margin-top:2px;">Last active: {last_active}</div>
+            </div>
+            <div style="width:1px;height:60px;background:#334155;"></div>
+            <div style="text-align:center;min-width:100px;">
+                <div style="font-size:1.8rem;font-weight:900;color:{lvl_color};">{eng_score}<span style="font-size:1rem;color:#64748b;">/100</span></div>
+                <div style="background:{lvl_bg};color:{lvl_color};border:1px solid {lvl_color}44;
+                            border-radius:20px;padding:1px 10px;font-size:0.72rem;font-weight:700;
+                            display:inline-block;margin-top:2px;">{eng_level}</div>
+                <div style="font-size:0.65rem;color:#475569;margin-top:3px;">Engagement Score</div>
+            </div>
+            <div style="width:1px;height:60px;background:#334155;"></div>
+            <div style="flex:1;min-width:160px;">
+                <div style="font-size:0.7rem;color:#64748b;margin-bottom:4px;">Last 14 days activity</div>
+                <div>{dots_html}</div>
+                <div style="font-size:0.7rem;color:#64748b;margin-top:6px;">
+                    📊 {eng_s30} sessions this month &nbsp;·&nbsp; ∅ {eng_avg:.0f}% avg score
+                </div>
+            </div>
+        </div>
+        {notif_html}
     </div>
     """,
     unsafe_allow_html=True,

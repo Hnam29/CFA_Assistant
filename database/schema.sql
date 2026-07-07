@@ -124,6 +124,17 @@ CREATE TABLE IF NOT EXISTS curriculum_weights (
     weight REAL    NOT NULL
 );
 
+-- Admin → user notifications
+CREATE TABLE IF NOT EXISTS notifications (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id    INTEGER NOT NULL,
+    message    TEXT    NOT NULL,
+    sender     TEXT    DEFAULT 'admin',
+    is_read    INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
 -- ── Database Indices for Query Optimization ───────────────────
 CREATE INDEX IF NOT EXISTS idx_user_answers_user_question ON user_answers(user_id, question_id);
 CREATE INDEX IF NOT EXISTS idx_user_answers_session ON user_answers(session_id);

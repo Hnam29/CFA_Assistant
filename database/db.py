@@ -205,6 +205,20 @@ def init_db() -> None:
                     conn.execute(_m)
                 except Exception:
                     pass
+        # Create notifications table if missing
+        with get_connection() as conn:
+            try:
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS notifications (
+                        id SERIAL PRIMARY KEY,
+                        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                        message TEXT NOT NULL,
+                        sender TEXT DEFAULT 'admin',
+                        is_read INTEGER DEFAULT 0,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )""")
+            except Exception:
+                pass
 
         # Seed default weights in PostgreSQL
         with get_connection() as conn:
@@ -243,6 +257,21 @@ def init_db() -> None:
             "ALTER TABLE users ADD COLUMN phone TEXT",
             "ALTER TABLE study_sessions ADD COLUMN session_state TEXT",
         ]
+        # notifications table (SQLite)
+        try:
+            conn.conn.executescript("""
+                CREATE TABLE IF NOT EXISTS notifications (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    message TEXT NOT NULL,
+                    sender TEXT DEFAULT 'admin',
+                    is_read INTEGER DEFAULT 0,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                );
+            """)
+        except Exception:
+            pass
         for _m in _migrations:
             try:
                 if is_postgres():
@@ -994,3 +1023,279 @@ def discard_session(session_id: int) -> None:
         conn.execute("DELETE FROM user_answers WHERE session_id = ?", (session_id,))
         conn.execute("DELETE FROM study_sessions WHERE id = ?", (session_id,))
 
+
+# ═══════════════════════════════════════════════════════════════════
+# ADMIN ANALYTICS — new functions
+# ═══════════════════════════════════════════════════════════════════
+
+def get_user_activity_heatmap(user_id: int) -> Dict[str, int]:
+    """Return {date_str: session_count} for the last 365 days."""
+    with get_connection() as conn:
+        rows = conn.execute(
+            """SELECT DATE(started_at) as day, COUNT(*) as cnt
+               FROM study_sessions
+               WHERE user_id = ? AND started_at >= DATE('now', '-365 days')
+               GROUP BY DATE(started_at)""",
+            (user_id,)
+        ).fetchall()
+    result: Dict[str, int] = {}
+    for r in rows:
+        day = r["day"]
+        if hasattr(day, "isoformat"):
+            day = day.isoformat()
+        result[str(day)] = r["cnt"]
+    return result
+
+
+def get_user_score_trend(user_id: int) -> List[Dict]:
+    """Return list of {date, score, topic, session_type} for all completed sessions, ordered by date."""
+    with get_connection() as conn:
+        rows = conn.execute(
+            """SELECT DATE(started_at) as day, score, topic, session_type
+               FROM study_sessions
+               WHERE user_id = ? AND completed = 1 AND score IS NOT NULL
+               ORDER BY started_at ASC""",
+            (user_id,)
+        ).fetchall()
+    result = []
+    for r in rows:
+        day = r["day"]
+        if hasattr(day, "isoformat"):
+            day = day.isoformat()
+        result.append({"date": str(day), "score": r["score"],
+                       "topic": r["topic"], "session_type": r["session_type"]})
+    return result
+
+
+def get_user_topic_coverage(user_id: int) -> Dict[str, int]:
+    """Return {topic: sessions_done} for all CFA topics the user has completed at least once."""
+    with get_connection() as conn:
+        rows = conn.execute(
+            """SELECT topic, COUNT(*) as cnt
+               FROM study_sessions
+               WHERE user_id = ? AND completed = 1
+               GROUP BY topic""",
+            (user_id,)
+        ).fetchall()
+    return {r["topic"]: r["cnt"] for r in rows}
+
+
+def get_user_session_completion_rate(user_id: int) -> Dict[str, int]:
+    """Return {completed, abandoned, total} session counts for a user."""
+    with get_connection() as conn:
+        rows = conn.execute(
+            """SELECT completed, COUNT(*) as cnt
+               FROM study_sessions
+               WHERE user_id = ?
+               GROUP BY completed""",
+            (user_id,)
+        ).fetchall()
+    completed = 0
+    abandoned = 0
+    for r in rows:
+        if r["completed"] == 1:
+            completed = r["cnt"]
+        else:
+            abandoned = r["cnt"]
+    return {"completed": completed, "abandoned": abandoned, "total": completed + abandoned}
+
+
+def get_retention_funnel() -> Dict[str, int]:
+    """Return counts at each retention stage for platform-wide analytics."""
+    from datetime import datetime, timedelta
+    seven_days_ago = (datetime.utcnow() - timedelta(days=7)).isoformat()[:10]
+    with get_connection() as conn:
+        registered = conn.execute("SELECT COUNT(*) as c FROM users").fetchone()["c"]
+        onboarded = conn.execute(
+            "SELECT COUNT(*) as c FROM user_profiles WHERE onboarding_done = 1"
+        ).fetchone()["c"]
+        had_session = conn.execute(
+            "SELECT COUNT(DISTINCT user_id) as c FROM study_sessions WHERE completed = 1"
+        ).fetchone()["c"]
+        active_5plus = conn.execute(
+            """SELECT COUNT(*) as c FROM (
+                SELECT user_id FROM study_sessions WHERE completed=1
+                GROUP BY user_id HAVING COUNT(*) >= 5
+               ) sub"""
+        ).fetchone()["c"]
+        active_7days = conn.execute(
+            """SELECT COUNT(DISTINCT user_id) as c FROM study_sessions
+               WHERE completed=1 AND DATE(started_at) >= ?""",
+            (seven_days_ago,)
+        ).fetchone()["c"]
+    return {
+        "registered": registered,
+        "onboarded": onboarded,
+        "had_session": had_session,
+        "active_5plus": active_5plus,
+        "active_7days": active_7days,
+    }
+
+
+def send_admin_notification(user_id: int, message: str, sender: str = "admin") -> None:
+    """Admin: Send a notification message to a user."""
+    with get_connection() as conn:
+        conn.execute(
+            "INSERT INTO notifications (user_id, message, sender) VALUES (?, ?, ?)",
+            (user_id, message, sender)
+        )
+
+
+def get_user_notifications(user_id: int) -> List[Dict]:
+    """Fetch all notifications for a user, newest first."""
+    with get_connection() as conn:
+        rows = conn.execute(
+            """SELECT id, message, sender, is_read, created_at
+               FROM notifications WHERE user_id = ?
+               ORDER BY created_at DESC""",
+            (user_id,)
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def mark_notifications_read(user_id: int) -> None:
+    """Mark all notifications as read for a user."""
+    with get_connection() as conn:
+        conn.execute(
+            "UPDATE notifications SET is_read = 1 WHERE user_id = ?",
+            (user_id,)
+        )
+
+
+def get_user_streak(user_id: int) -> Dict[str, Any]:
+    """Compute current streak, longest streak, and last active date."""
+    from datetime import date as d_type, timedelta
+    with get_connection() as conn:
+        rows = conn.execute(
+            """SELECT DISTINCT DATE(started_at) as day
+               FROM study_sessions
+               WHERE user_id = ? AND completed = 1
+               ORDER BY day DESC""",
+            (user_id,)
+        ).fetchall()
+    dates = []
+    for r in rows:
+        day = r["day"]
+        if isinstance(day, str):
+            try:
+                from datetime import date as dt_
+                day = dt_.fromisoformat(day)
+            except Exception:
+                continue
+        if hasattr(day, "date"):
+            day = day.date()
+        dates.append(day)
+
+    if not dates:
+        return {"current_streak": 0, "longest_streak": 0, "last_active_date": None}
+
+    today = d_type.today()
+    last_active = dates[0]
+
+    # Current streak
+    current_streak = 0
+    check = today
+    date_set = set(dates)
+    while check in date_set or (check == today and last_active == today - timedelta(days=1)):
+        if check in date_set:
+            current_streak += 1
+        check -= timedelta(days=1)
+        if check not in date_set:
+            break
+    # Simpler: just count consecutive days backwards from today or yesterday
+    current_streak = 0
+    check = today
+    if last_active < today - timedelta(days=1):
+        current_streak = 0
+    else:
+        while check in date_set:
+            current_streak += 1
+            check -= timedelta(days=1)
+        if current_streak == 0 and last_active == today - timedelta(days=1):
+            check = today - timedelta(days=1)
+            while check in date_set:
+                current_streak += 1
+                check -= timedelta(days=1)
+
+    # Longest streak
+    longest = 1
+    run = 1
+    sorted_dates = sorted(date_set)
+    for i in range(1, len(sorted_dates)):
+        if (sorted_dates[i] - sorted_dates[i-1]).days == 1:
+            run += 1
+            longest = max(longest, run)
+        else:
+            run = 1
+
+    return {
+        "current_streak": current_streak,
+        "longest_streak": longest,
+        "last_active_date": last_active.isoformat() if last_active else None,
+    }
+
+
+def get_user_engagement_score(user_id: int) -> Dict[str, Any]:
+    """Compute an engagement score (0-100) with breakdown."""
+    from datetime import datetime, timedelta
+    thirty_ago = (datetime.utcnow() - timedelta(days=30)).isoformat()[:10]
+    with get_connection() as conn:
+        sessions_30d = conn.execute(
+            "SELECT COUNT(*) as c FROM study_sessions WHERE user_id=? AND completed=1 AND DATE(started_at)>=?",
+            (user_id, thirty_ago)
+        ).fetchone()["c"] or 0
+        avg_row = conn.execute(
+            "SELECT AVG(score) as avg FROM study_sessions WHERE user_id=? AND completed=1",
+            (user_id,)
+        ).fetchone()
+        avg_score = avg_row["avg"] or 0 if avg_row else 0
+
+    streak_data = get_user_streak(user_id)
+    current_streak = streak_data["current_streak"]
+
+    # Score components (each capped)
+    sessions_pts = min(sessions_30d * 4, 40)   # max 40
+    score_pts    = min(avg_score * 0.4, 40)     # max 40
+    streak_pts   = min(current_streak * 2, 20)  # max 20
+    total        = int(sessions_pts + score_pts + streak_pts)
+
+    if total >= 85:   level = "Elite"
+    elif total >= 65: level = "Advanced"
+    elif total >= 45: level = "Focused"
+    elif total >= 25: level = "Steady"
+    else:             level = "Beginner"
+
+    return {
+        "score": total,
+        "level": level,
+        "sessions_pts": int(sessions_pts),
+        "score_pts": int(score_pts),
+        "streak_pts": int(streak_pts),
+        "sessions_30d": sessions_30d,
+        "avg_score": avg_score,
+        "current_streak": current_streak,
+    }
+
+
+def export_user_data(user_id: int) -> List[Dict]:
+    """Export all completed session data for a user as a list of dicts (for CSV download)."""
+    with get_connection() as conn:
+        rows = conn.execute(
+            """SELECT s.id, s.topic, s.session_type, s.score,
+                      s.total_q, s.correct_q, s.duration_mins, s.completed,
+                      DATE(s.started_at) as date
+               FROM study_sessions s
+               WHERE s.user_id = ?
+               ORDER BY s.started_at ASC""",
+            (user_id,)
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def reset_user_progress(user_id: int) -> None:
+    """Admin: Clear a user's sessions, answers, and topic performance without deleting the account."""
+    with get_connection() as conn:
+        conn.execute("DELETE FROM user_answers WHERE user_id = ?", (user_id,))
+        conn.execute("DELETE FROM study_sessions WHERE user_id = ?", (user_id,))
+        conn.execute("DELETE FROM topic_performance WHERE user_id = ?", (user_id,))
+        conn.execute("DELETE FROM scheduled_sessions WHERE user_id = ?", (user_id,))
