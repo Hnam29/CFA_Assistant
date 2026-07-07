@@ -597,10 +597,10 @@ elif st.session_state.admin_tab == "actions":
 
     # ── Send Notification ─────────────────────────────────────────
     with action_col1:
-        st.markdown(
-            """<div class="cfa-card">
-                <div class="section-header">📬 Send Notification</div>
-            """, unsafe_allow_html=True)
+        # Display last sent notification if exists
+        if "last_sent_notif" in st.session_state:
+            ls = st.session_state["last_sent_notif"]
+            st.success(f"✅ Notification sent to **{ls['user']}**:\n\n\"{ls['msg']}\"")
 
         with st.form("send_notif_form", clear_on_submit=True):
             notif_target = st.selectbox("Target User", user_names, key="notif_target")
@@ -613,29 +613,11 @@ elif st.session_state.admin_tab == "actions":
                 else:
                     target_user = user_options[notif_target]
                     send_admin_notification(target_user["id"], notif_msg.strip(), sender=admin_user)
-                    st.success(f"✅ Notification sent to **{notif_target}**!")
-                    # Force rerun to show the new message in the history log below
+                    st.session_state["last_sent_notif"] = {
+                        "user": notif_target,
+                        "msg": notif_msg.strip()
+                    }
                     st.rerun()
-
-        # Display history of sent messages to this user
-        target_user = user_options[notif_target]
-        notifs = get_user_notifications(target_user["id"])
-        if notifs:
-            st.markdown("<div style='font-size:0.85rem; font-weight:700; color:#94a3b8; margin-top:1rem; margin-bottom:0.4rem;'>📜 Sent Message History:</div>", unsafe_allow_html=True)
-            for n in notifs[:5]:
-                created_raw = n.get("created_at") or ""
-                created = created_raw.isoformat()[:16].replace("T", " ") if hasattr(created_raw, "isoformat") else str(created_raw)[:16]
-                read_status = "🟢 Read" if n.get("is_read") else "⚪ Unread"
-                st.markdown(
-                    f"""<div style="background:#0f172a; padding:0.5rem 0.7rem; border-radius:8px; border:1px solid #1e293b; margin-bottom:0.4rem; font-size:0.75rem;">
-                        <div style="display:flex; justify-content:space-between; color:#64748b; font-size:0.7rem; margin-bottom:3px;">
-                            <span>🕒 {created}</span>
-                            <span>{read_status}</span>
-                        </div>
-                        <div style="color:#cbd5e1; line-height:1.4;">{n['message']}</div>
-                    </div>""",
-                    unsafe_allow_html=True
-                )
 
         st.markdown("</div>", unsafe_allow_html=True)
 
@@ -681,67 +663,29 @@ elif st.session_state.admin_tab == "actions":
         st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
-    action_col3, action_col4 = st.columns(2)
 
-    # ── Reset User Progress ───────────────────────────────────────
-    with action_col3:
-        st.markdown(
-            """<div class="cfa-card">
-                <div class="section-header">🔄 Reset User Progress</div>
-            """, unsafe_allow_html=True)
+    # ── Impersonate User (Full Width Row) ─────────────────────────
+    st.markdown(
+        """<div class="cfa-card">
+            <div class="section-header">👤 Impersonate User</div>
+        """, unsafe_allow_html=True)
 
-        reset_target = st.selectbox("Select User", user_names, key="reset_target")
+    col_imp_sel, col_imp_btn = st.columns([2, 1])
+    with col_imp_sel:
+        impersonate_target = st.selectbox("Select User", user_names, key="impersonate_target", label_visibility="collapsed")
         st.markdown(
-            "<p style='color:#f59e0b;font-size:0.8rem;'>⚠️ This clears all sessions, answers, and scheduled sessions but keeps the account.</p>",
+            "<p style='color:#94a3b8;font-size:0.8rem;margin-top:0.4rem;'>View the app as this user. Your admin session remains active — click 'Exit' in the sidebar to return.</p>",
             unsafe_allow_html=True,
         )
-
-        confirm_reset_key = f"confirm_reset_{reset_target}"
-        if st.session_state.get(confirm_reset_key):
-            st.warning(f"Reset all progress for **{reset_target}**? This cannot be undone.")
-            yr, nr = st.columns(2)
-            if yr.button("✅ Confirm Reset", key="yes_reset_btn", use_container_width=True, type="primary"):
-                target_user = user_options[reset_target]
-                reset_user_progress(target_user["id"])
-                st.session_state.pop(confirm_reset_key, None)
-                st.success(f"✅ Progress reset for **{reset_target}**.")
-                st.rerun()
-            if nr.button("❌ Cancel", key="no_reset_btn", use_container_width=True):
-                st.session_state.pop(confirm_reset_key, None)
-                st.rerun()
-        else:
-            if st.button("🔄 Reset Progress", use_container_width=True, key="reset_btn"):
-                st.session_state[confirm_reset_key] = True
-                st.rerun()
-
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    # ── Impersonate User ──────────────────────────────────────────
-    with action_col4:
-        st.markdown(
-            """<div class="cfa-card">
-                <div class="section-header">👤 Impersonate User</div>
-            """, unsafe_allow_html=True)
-
-        impersonate_target = st.selectbox("Select User", user_names, key="impersonate_target")
-        st.markdown(
-            "<p style='color:#94a3b8;font-size:0.8rem;'>View the app as this user. Your admin session remains active — click 'Exit' to return.</p>",
-            unsafe_allow_html=True,
-        )
-
+    with col_imp_btn:
         if st.session_state.get("impersonate_uid"):
-            imp_uid  = st.session_state["impersonate_uid"]
             imp_name = st.session_state.get("impersonate_name", "user")
             st.markdown(
                 f"<div style='background:rgba(99,102,241,0.15);border:1px solid #6366f1;border-radius:8px;"
-                f"padding:0.6rem 1rem;margin-bottom:0.8rem;font-size:0.83rem;color:#818cf8;'>"
-                f"👤 Currently viewing as <strong>{imp_name}</strong></div>",
+                f"padding:0.45rem 1rem;font-size:0.83rem;color:#818cf8;text-align:center;font-weight:600;'>"
+                f"👤 Currently viewing as {imp_name}</div>",
                 unsafe_allow_html=True,
             )
-            if st.button("🚪 Exit Impersonate", use_container_width=True, key="exit_impersonate"):
-                st.session_state.pop("impersonate_uid", None)
-                st.session_state.pop("impersonate_name", None)
-                st.rerun()
         else:
             if st.button("👤 Start Impersonating", type="primary", use_container_width=True, key="start_impersonate"):
                 target_user = user_options[impersonate_target]
@@ -750,4 +694,4 @@ elif st.session_state.admin_tab == "actions":
                 st.success(f"Now impersonating {impersonate_target}. Go to Dashboard to see their view.")
                 st.rerun()
 
-        st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
