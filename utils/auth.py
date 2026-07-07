@@ -179,13 +179,11 @@ def render_auth_page() -> bool:
                             user = get_user_by_username(username)
                         login_user(user)
                         st.success(f"Welcome Admin, {username}! 🎓")
-                        st.rerun()
                     else:
                         user = get_user_by_username(username)
                         if user and verify_password(password, user["password"]):
                             login_user(user)
                             st.success(f"Welcome back, {username}! 🎓")
-                            st.rerun()
                         else:
                             st.error(t("invalid_credentials"))
 
@@ -222,8 +220,6 @@ def render_auth_page() -> bool:
                         
                         # Save success notification message in session state so we can display it below the form
                         st.session_state["show_welcome_noti"] = new_email
-                        
-                        st.rerun()
                     else:
                         st.error(t("username_taken"))
         
