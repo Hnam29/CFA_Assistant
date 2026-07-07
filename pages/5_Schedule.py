@@ -92,7 +92,8 @@ st.markdown("""
 
 init_db()
 if not is_logged_in():
-    render_auth_page()
+    st.session_state["show_auth"] = "login"
+    st.switch_page("app.py")
     st.stop()
 
 user = get_current_user()

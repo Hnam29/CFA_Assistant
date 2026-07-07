@@ -94,15 +94,25 @@ def _create_session_token(user_id: int) -> str:
 
 
 def _validate_session_token(token: str) -> dict | None:
-    """Look up a token in the DB and return the user dict if valid."""
+    """Look up a token in the DB and return the user dict if valid with retries."""
+    import time
     from database.db import get_connection, get_user_by_id
-    with get_connection() as conn:
-        row = conn.execute(
-            "SELECT user_id FROM login_tokens WHERE token = ?",
-            (token,),
-        ).fetchone()
-    if row:
-        return get_user_by_id(row["user_id"])
+    last_err = None
+    for attempt in range(3):
+        try:
+            with get_connection() as conn:
+                row = conn.execute(
+                    "SELECT user_id FROM login_tokens WHERE token = ?",
+                    (token,),
+                ).fetchone()
+            if row:
+                return get_user_by_id(row["user_id"])
+            return None
+        except Exception as e:
+            last_err = e
+            time.sleep(0.2)
+    if last_err:
+        raise last_err
     return None
 
 
@@ -124,6 +134,18 @@ def is_logged_in() -> bool:
             except Exception:
                 pass
         return True
+
+    # Check if this is a fresh reload. Streamlit sometimes runs the script
+    # once before query params are synced from the client. We do one fast
+    # rerun to ensure query params are populated.
+    if "run_count" not in st.session_state:
+        st.session_state["run_count"] = 1
+        if not st.query_params.get("sid"):
+            try:
+                st.rerun()
+            except Exception:
+                pass
+
     # Try restoring session from URL token (handles reloads)
     try:
         token = st.query_params.get("sid")
