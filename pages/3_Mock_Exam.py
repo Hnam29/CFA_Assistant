@@ -15,12 +15,9 @@ from database.db import (
     init_db, create_session, complete_session,
     save_question, save_answer, upsert_topic_performance,
     get_topic_performance, get_curriculum_weights,
-    is_premium_user,
+    is_premium_user, save_session_state, get_pending_sessions,
+    discard_session,
 )
-try:
-    from database.db import save_session_state
-except ImportError:
-    def save_session_state(sid, data): pass
 from utils.auth import is_logged_in, get_current_user, render_auth_page
 from utils.cfa_topics import TOPIC_NAMES, TOPIC_WEIGHTS, CFA_TOPICS
 from utils.charts import topic_bar_chart
@@ -77,6 +74,48 @@ st.markdown(
 # SETUP
 # ─────────────────────────────────────────────────────────────────
 if not st.session_state.exam_started:
+    # Check for saved mock sessions
+    try:
+        pending_mocks = [s for s in get_pending_sessions(uid) if s["session_type"].lower() == "mock"]
+    except Exception:
+        pending_mocks = []
+
+    if pending_mocks:
+        for pm in pending_mocks:
+            st.markdown(
+                f"""<div class="cfa-card" style="border-color:#6366f1; background:rgba(99,102,241,0.05); margin-bottom:1.2rem; padding:1.2rem;">
+                    <h4 style="color:#818cf8; margin:0 0 0.5rem 0;">🔄 Saved Mock Exam In Progress</h4>
+                    <p style="color:#94a3b8; font-size:0.85rem; margin:0 0 1rem 0;">
+                        You have an active mock exam in progress.
+                        Would you like to resume it?
+                    </p>
+                </div>""",
+                unsafe_allow_html=True
+            )
+            r_col1, r_col2, r_spacer = st.columns([2, 2, 6])
+            with r_col1:
+                if st.button("▶️ Resume Exam", key=f"exam_resume_{pm['id']}", type="primary", use_container_width=True):
+                    state = pm["state"]
+                    st.session_state.exam_questions = state["questions"]
+                    st.session_state.exam_answers = state["answers"]
+                    st.session_state.exam_started = True
+                    st.session_state.exam_submitted = False
+                    st.session_state.exam_session_id = pm["id"]
+                    st.session_state.exam_start_time = time.time() - state.get("elapsed_secs", 0)
+                    st.session_state.exam_current_idx = state.get("current_idx", 0)
+                    st.session_state.exam_flags = set(state.get("flags", []))
+                    st.session_state.exam_confirm_submit = False
+                    st.session_state.exam_duration_mins = state.get("exam_duration_mins", 30)
+                    st.rerun()
+            with r_col2:
+                if st.button("🗑️ Discard", key=f"exam_discard_{pm['id']}", use_container_width=True):
+                    try:
+                        discard_session(pm["id"])
+                        st.toast("Saved mock exam discarded.")
+                        st.rerun()
+                    except Exception:
+                        pass
+        st.markdown("<br>", unsafe_allow_html=True)
 
     col_l, col_r = st.columns([1.2, 1])
 
@@ -237,6 +276,23 @@ elif st.session_state.exam_started and not st.session_state.exam_submitted:
         curr_idx = 0
     st.session_state.exam_current_idx = curr_idx
     q = questions[curr_idx]
+
+    # Auto-save state in case of reload
+    if st.session_state.exam_session_id:
+        try:
+            save_session_state(
+                st.session_state.exam_session_id,
+                {
+                    "questions": questions,
+                    "answers": answers,
+                    "current_idx": curr_idx,
+                    "flags": list(flags),
+                    "elapsed_secs": elapsed,
+                    "exam_duration_mins": st.session_state.exam_duration_mins,
+                }
+            )
+        except Exception:
+            pass
 
     mins, secs = divmod(int(remaining), 60)
     timer_class = "timer-danger" if remaining < 120 else "timer-warning" if remaining < 300 else ""

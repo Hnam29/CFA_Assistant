@@ -16,12 +16,9 @@ from database.db import (
     init_db, create_session, complete_session,
     save_question, save_answer, upsert_topic_performance,
     get_topic_performance, get_bank_questions, get_bank_stats,
-    delete_bank_questions,
+    delete_bank_questions, save_session_state, get_pending_sessions,
+    discard_session,
 )
-try:
-    from database.db import save_session_state
-except ImportError:
-    def save_session_state(sid, data): pass
 from utils.auth import is_logged_in, get_current_user, render_auth_page
 from utils.cfa_topics import TOPIC_NAMES, get_subtopics, DIFFICULTY_LEVELS, normalize_topic_name
 from utils.sidebar import render_sidebar
@@ -117,6 +114,49 @@ if not st.session_state.practice_questions:
 
     # ── TAB: Start Practice ──────────────────────────────────────────────────
     if st.session_state.prac_active_tab == "setup":
+        # Check for saved sessions
+        try:
+            pending_prac = [s for s in get_pending_sessions(uid) if s["session_type"].lower() in ("practice", "mixed")]
+        except Exception:
+            pending_prac = []
+
+        if pending_prac:
+            for ps in pending_prac:
+                st.markdown(
+                    f"""<div class="cfa-card" style="border-color:#10b981; background:rgba(16,185,129,0.05); margin-bottom:1.2rem; padding:1.2rem;">
+                        <h4 style="color:#34d399; margin:0 0 0.5rem 0;">🔄 Saved Practice Session In Progress</h4>
+                        <p style="color:#94a3b8; font-size:0.85rem; margin:0 0 1rem 0;">
+                            You have an active practice session on <strong>{ps['topic']}</strong> in progress.
+                            Would you like to resume it?
+                        </p>
+                    </div>""",
+                    unsafe_allow_html=True
+                )
+                r_col1, r_col2, r_spacer = st.columns([2, 2, 6])
+                with r_col1:
+                    if st.button("▶️ Resume Practice", key=f"prac_resume_{ps['id']}", type="primary", use_container_width=True):
+                        state = ps["state"]
+                        st.session_state.practice_questions = state["questions"]
+                        st.session_state.practice_answers = state["answers"]
+                        st.session_state.practice_submitted = False
+                        st.session_state.practice_session_id = ps["id"]
+                        st.session_state.practice_start_time = time.time() - state.get("elapsed_secs", 0)
+                        st.session_state.practice_current_idx = state.get("current_idx", 0)
+                        st.session_state.practice_flags = set(state.get("flags", []))
+                        st.session_state.practice_timer_secs = state.get("practice_timer_secs", len(state["questions"]) * 90)
+                        st.session_state.practice_confirm_submit = False
+                        st.session_state.practice_radio_versions = {}
+                        st.rerun()
+                with r_col2:
+                    if st.button("🗑️ Discard", key=f"prac_discard_{ps['id']}", use_container_width=True):
+                        try:
+                            discard_session(ps["id"])
+                            st.toast("Saved session discarded.")
+                            st.rerun()
+                        except Exception:
+                            pass
+            st.markdown("<br>", unsafe_allow_html=True)
+
         col_setup, col_info = st.columns([1.2, 1])
 
         with col_setup:
@@ -416,6 +456,23 @@ elif not st.session_state.practice_submitted:
         curr_idx = 0
     st.session_state.practice_current_idx = curr_idx
     q = questions[curr_idx]
+
+    # Auto-save state in case of reload
+    if st.session_state.practice_session_id:
+        try:
+            save_session_state(
+                st.session_state.practice_session_id,
+                {
+                    "questions": questions,
+                    "answers": answers,
+                    "current_idx": curr_idx,
+                    "flags": list(flags),
+                    "elapsed_secs": elapsed_secs,
+                    "practice_timer_secs": timer_total,
+                }
+            )
+        except Exception:
+            pass
     
     # Candidate name
     display_name = user["username"]
