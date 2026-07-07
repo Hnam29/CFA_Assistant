@@ -121,40 +121,55 @@ if not st.session_state.practice_questions:
             pending_prac = []
 
         if pending_prac:
-            for ps in pending_prac:
+            with st.container(border=True):
                 st.markdown(
-                    f"""<div class="cfa-card" style="border-color:#10b981; background:rgba(16,185,129,0.05); margin-bottom:1.2rem; padding:1.2rem;">
-                        <h4 style="color:#34d399; margin:0 0 0.5rem 0;">🔄 Saved Practice Session In Progress</h4>
-                        <p style="color:#94a3b8; font-size:0.85rem; margin:0 0 1rem 0;">
-                            You have an active practice session on <strong>{ps['topic']}</strong> in progress.
-                            Would you like to resume it?
-                        </p>
-                    </div>""",
+                    """<h4 style="color:#34d399; margin:0 0 0.2rem 0; font-size:1.05rem; display:flex; align-items:center; gap:0.5rem;">
+                        🔄 Saved Practice Sessions In Progress
+                    </h4>
+                    <p style="color:#94a3b8; font-size:0.8rem; margin:0 0 1rem 0;">
+                        Resume an active session below or discard it to start a new one.
+                    </p>""",
                     unsafe_allow_html=True
                 )
-                r_col1, r_col2, r_spacer = st.columns([2, 2, 6])
-                with r_col1:
-                    if st.button("▶️ Resume Practice", key=f"prac_resume_{ps['id']}", type="primary", use_container_width=True):
-                        state = ps["state"]
-                        st.session_state.practice_questions = state["questions"]
-                        st.session_state.practice_answers = state["answers"]
-                        st.session_state.practice_submitted = False
-                        st.session_state.practice_session_id = ps["id"]
-                        st.session_state.practice_start_time = time.time() - state.get("elapsed_secs", 0)
-                        st.session_state.practice_current_idx = state.get("current_idx", 0)
-                        st.session_state.practice_flags = set(state.get("flags", []))
-                        st.session_state.practice_timer_secs = state.get("practice_timer_secs", len(state["questions"]) * 90)
-                        st.session_state.practice_confirm_submit = False
-                        st.session_state.practice_radio_versions = {}
-                        st.rerun()
-                with r_col2:
-                    if st.button("🗑️ Discard", key=f"prac_discard_{ps['id']}", use_container_width=True):
-                        try:
-                            discard_session(ps["id"])
-                            st.toast("Saved session discarded.")
+                for ps in pending_prac:
+                    state = ps["state"]
+                    elapsed = state.get("elapsed_secs", 0)
+                    t_mins, t_secs = divmod(int(elapsed), 60)
+                    answered_count = len(state.get("answers", {}))
+                    total_qs = len(state.get("questions", []))
+                    
+                    row_col_info, row_col_resume, row_col_discard = st.columns([5.5, 2.25, 2.25])
+                    with row_col_info:
+                        st.markdown(
+                            f"""<div style="padding-top:0.35rem; display:flex; align-items:center;">
+                                <strong style="color:#f1f5f9; font-size:0.92rem;">🎯 {ps['topic']}</strong>
+                                <span style="color:#64748b; font-size:0.75rem; margin-left:0.5rem;">
+                                    ({answered_count}/{total_qs} Qs · {t_mins}m {t_secs}s)
+                                </span>
+                            </div>""",
+                            unsafe_allow_html=True
+                        )
+                    with row_col_resume:
+                        if st.button("▶️ Resume", key=f"prac_resume_{ps['id']}", type="primary", use_container_width=True):
+                            st.session_state.practice_questions = state["questions"]
+                            st.session_state.practice_answers = state["answers"]
+                            st.session_state.practice_submitted = False
+                            st.session_state.practice_session_id = ps["id"]
+                            st.session_state.practice_start_time = time.time() - elapsed
+                            st.session_state.practice_current_idx = state.get("current_idx", 0)
+                            st.session_state.practice_flags = set(state.get("flags", []))
+                            st.session_state.practice_timer_secs = state.get("practice_timer_secs", total_qs * 90)
+                            st.session_state.practice_confirm_submit = False
+                            st.session_state.practice_radio_versions = {}
                             st.rerun()
-                        except Exception:
-                            pass
+                    with row_col_discard:
+                        if st.button("🗑️ Discard", key=f"prac_discard_{ps['id']}", use_container_width=True):
+                            try:
+                                discard_session(ps["id"])
+                                st.toast("Saved session discarded.")
+                                st.rerun()
+                            except Exception:
+                                pass
             st.markdown("<br>", unsafe_allow_html=True)
 
         col_setup, col_info = st.columns([1.2, 1])
