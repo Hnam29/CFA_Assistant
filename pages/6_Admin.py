@@ -24,6 +24,7 @@ from database.db import (
     get_retention_funnel,
     # Actions
     send_admin_notification, export_user_data, reset_user_progress,
+    get_user_notifications,
 )
 from utils.auth import is_logged_in, get_current_user, render_auth_page, get_admin_credentials
 from utils.sidebar import render_sidebar
@@ -613,6 +614,28 @@ elif st.session_state.admin_tab == "actions":
                     target_user = user_options[notif_target]
                     send_admin_notification(target_user["id"], notif_msg.strip(), sender=admin_user)
                     st.success(f"✅ Notification sent to **{notif_target}**!")
+                    # Force rerun to show the new message in the history log below
+                    st.rerun()
+
+        # Display history of sent messages to this user
+        target_user = user_options[notif_target]
+        notifs = get_user_notifications(target_user["id"])
+        if notifs:
+            st.markdown("<div style='font-size:0.85rem; font-weight:700; color:#94a3b8; margin-top:1rem; margin-bottom:0.4rem;'>📜 Sent Message History:</div>", unsafe_allow_html=True)
+            for n in notifs[:5]:
+                created_raw = n.get("created_at") or ""
+                created = created_raw.isoformat()[:16].replace("T", " ") if hasattr(created_raw, "isoformat") else str(created_raw)[:16]
+                read_status = "🟢 Read" if n.get("is_read") else "⚪ Unread"
+                st.markdown(
+                    f"""<div style="background:#0f172a; padding:0.5rem 0.7rem; border-radius:8px; border:1px solid #1e293b; margin-bottom:0.4rem; font-size:0.75rem;">
+                        <div style="display:flex; justify-content:space-between; color:#64748b; font-size:0.7rem; margin-bottom:3px;">
+                            <span>🕒 {created}</span>
+                            <span>{read_status}</span>
+                        </div>
+                        <div style="color:#cbd5e1; line-height:1.4;">{n['message']}</div>
+                    </div>""",
+                    unsafe_allow_html=True
+                )
 
         st.markdown("</div>", unsafe_allow_html=True)
 
