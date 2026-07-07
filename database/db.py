@@ -1030,13 +1030,17 @@ def discard_session(session_id: int) -> None:
 
 def get_user_activity_heatmap(user_id: int) -> Dict[str, int]:
     """Return {date_str: session_count} for the last 365 days."""
+    from datetime import date, timedelta
+    one_year_ago = (date.today() - timedelta(days=365)).isoformat()
+    # Date-cast syntax differs: PostgreSQL uses ::date, SQLite uses DATE()
+    date_expr = "started_at::date" if is_postgres() else "DATE(started_at)"
     with get_connection() as conn:
         rows = conn.execute(
-            """SELECT DATE(started_at) as day, COUNT(*) as cnt
+            f"""SELECT {date_expr} as day, COUNT(*) as cnt
                FROM study_sessions
-               WHERE user_id = ? AND started_at >= DATE('now', '-365 days')
-               GROUP BY DATE(started_at)""",
-            (user_id,)
+               WHERE user_id = ? AND started_at >= ?
+               GROUP BY {date_expr}""",
+            (user_id, one_year_ago)
         ).fetchall()
     result: Dict[str, int] = {}
     for r in rows:
@@ -1049,9 +1053,10 @@ def get_user_activity_heatmap(user_id: int) -> Dict[str, int]:
 
 def get_user_score_trend(user_id: int) -> List[Dict]:
     """Return list of {date, score, topic, session_type} for all completed sessions, ordered by date."""
+    date_expr = "started_at::date" if is_postgres() else "DATE(started_at)"
     with get_connection() as conn:
         rows = conn.execute(
-            """SELECT DATE(started_at) as day, score, topic, session_type
+            f"""SELECT {date_expr} as day, score, topic, session_type
                FROM study_sessions
                WHERE user_id = ? AND completed = 1 AND score IS NOT NULL
                ORDER BY started_at ASC""",
@@ -1102,8 +1107,10 @@ def get_user_session_completion_rate(user_id: int) -> Dict[str, int]:
 
 def get_retention_funnel() -> Dict[str, int]:
     """Return counts at each retention stage for platform-wide analytics."""
-    from datetime import datetime, timedelta
-    seven_days_ago = (datetime.utcnow() - timedelta(days=7)).isoformat()[:10]
+    from datetime import date, timedelta
+    seven_days_ago = (date.today() - timedelta(days=7)).isoformat()
+    # Use cast compatible with both PG and SQLite
+    date_expr = "started_at::date" if is_postgres() else "DATE(started_at)"
     with get_connection() as conn:
         registered = conn.execute("SELECT COUNT(*) as c FROM users").fetchone()["c"]
         onboarded = conn.execute(
@@ -1119,8 +1126,8 @@ def get_retention_funnel() -> Dict[str, int]:
                ) sub"""
         ).fetchone()["c"]
         active_7days = conn.execute(
-            """SELECT COUNT(DISTINCT user_id) as c FROM study_sessions
-               WHERE completed=1 AND DATE(started_at) >= ?""",
+            f"""SELECT COUNT(DISTINCT user_id) as c FROM study_sessions
+               WHERE completed=1 AND {date_expr} >= ?""",
             (seven_days_ago,)
         ).fetchone()["c"]
     return {
@@ -1165,9 +1172,10 @@ def mark_notifications_read(user_id: int) -> None:
 def get_user_streak(user_id: int) -> Dict[str, Any]:
     """Compute current streak, longest streak, and last active date."""
     from datetime import date as d_type, timedelta
+    date_expr = "started_at::date" if is_postgres() else "DATE(started_at)"
     with get_connection() as conn:
         rows = conn.execute(
-            """SELECT DISTINCT DATE(started_at) as day
+            f"""SELECT DISTINCT {date_expr} as day
                FROM study_sessions
                WHERE user_id = ? AND completed = 1
                ORDER BY day DESC""",
@@ -1237,11 +1245,12 @@ def get_user_streak(user_id: int) -> Dict[str, Any]:
 
 def get_user_engagement_score(user_id: int) -> Dict[str, Any]:
     """Compute an engagement score (0-100) with breakdown."""
-    from datetime import datetime, timedelta
-    thirty_ago = (datetime.utcnow() - timedelta(days=30)).isoformat()[:10]
+    from datetime import date, timedelta
+    thirty_ago = (date.today() - timedelta(days=30)).isoformat()
+    date_expr = "started_at::date" if is_postgres() else "DATE(started_at)"
     with get_connection() as conn:
         sessions_30d = conn.execute(
-            "SELECT COUNT(*) as c FROM study_sessions WHERE user_id=? AND completed=1 AND DATE(started_at)>=?",
+            f"SELECT COUNT(*) as c FROM study_sessions WHERE user_id=? AND completed=1 AND {date_expr}>=?",
             (user_id, thirty_ago)
         ).fetchone()["c"] or 0
         avg_row = conn.execute(
@@ -1279,11 +1288,12 @@ def get_user_engagement_score(user_id: int) -> Dict[str, Any]:
 
 def export_user_data(user_id: int) -> List[Dict]:
     """Export all completed session data for a user as a list of dicts (for CSV download)."""
+    date_expr = "s.started_at::date" if is_postgres() else "DATE(s.started_at)"
     with get_connection() as conn:
         rows = conn.execute(
-            """SELECT s.id, s.topic, s.session_type, s.score,
+            f"""SELECT s.id, s.topic, s.session_type, s.score,
                       s.total_q, s.correct_q, s.duration_mins, s.completed,
-                      DATE(s.started_at) as date
+                      {date_expr} as date
                FROM study_sessions s
                WHERE s.user_id = ?
                ORDER BY s.started_at ASC""",
