@@ -611,7 +611,6 @@ elif st.session_state.admin_tab == "actions":
                 target_user = user_options[notif_target]
                 send_admin_notification(target_user["id"], notif_msg.strip(), sender=admin_user)
                 st.success(f"✅ Notification sent to **{notif_target}**!")
-                st.session_state["notif_msg"] = ""
                 st.rerun()
 
         st.markdown("</div>", unsafe_allow_html=True)
