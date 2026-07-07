@@ -14,6 +14,20 @@ def render_sidebar():
     if not is_logged_in():
         return
 
+    # Check if impersonation is active
+    if st.session_state.get("impersonate_uid"):
+        imp_name = st.session_state.get("impersonate_name", "user")
+        st.sidebar.markdown(
+            f"<div style='background:rgba(99,102,241,0.15);border:1px solid #6366f1;border-radius:8px;"
+            f"padding:0.6rem 0.8rem;margin-bottom:0.8rem;font-size:0.8rem;color:#818cf8;text-align:center;'>"
+            f"👤 Viewing as: <strong>{imp_name}</strong></div>",
+            unsafe_allow_html=True,
+        )
+        if st.sidebar.button("🚪 Exit Impersonate", use_container_width=True, key="sidebar_exit_impersonate"):
+            st.session_state.pop("impersonate_uid", None)
+            st.session_state.pop("impersonate_name", None)
+            st.rerun()
+
     user = get_current_user()
     if not user:
         return

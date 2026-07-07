@@ -601,17 +601,18 @@ elif st.session_state.admin_tab == "actions":
                 <div class="section-header">📬 Send Notification</div>
             """, unsafe_allow_html=True)
 
-        notif_target = st.selectbox("Target User", user_names, key="notif_target")
-        notif_msg    = st.text_area("Message", placeholder="Write your message to the user…", height=120, key="notif_msg")
+        with st.form("send_notif_form", clear_on_submit=True):
+            notif_target = st.selectbox("Target User", user_names, key="notif_target")
+            notif_msg    = st.text_area("Message", placeholder="Write your message to the user…", height=120, key="notif_msg")
+            submitted    = st.form_submit_button("📤 Send Notification", type="primary", use_container_width=True)
 
-        if st.button("📤 Send Notification", type="primary", use_container_width=True, key="send_notif_btn"):
-            if not notif_msg.strip():
-                st.error("Please enter a message.")
-            else:
-                target_user = user_options[notif_target]
-                send_admin_notification(target_user["id"], notif_msg.strip(), sender=admin_user)
-                st.success(f"✅ Notification sent to **{notif_target}**!")
-                st.rerun()
+            if submitted:
+                if not notif_msg.strip():
+                    st.error("Please enter a message.")
+                else:
+                    target_user = user_options[notif_target]
+                    send_admin_notification(target_user["id"], notif_msg.strip(), sender=admin_user)
+                    st.success(f"✅ Notification sent to **{notif_target}**!")
 
         st.markdown("</div>", unsafe_allow_html=True)
 

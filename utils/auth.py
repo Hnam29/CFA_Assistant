@@ -85,7 +85,19 @@ def is_logged_in() -> bool:
 
 
 def get_current_user() -> dict | None:
-    return st.session_state.get("current_user", None)
+    current = st.session_state.get("current_user", None)
+    imp_uid = st.session_state.get("impersonate_uid")
+    if imp_uid and current:
+        try:
+            admin_user, _ = get_admin_credentials()
+            if current.get("username") == admin_user:
+                from database.db import get_user_by_id
+                imp_user = get_user_by_id(imp_uid)
+                if imp_user:
+                    return imp_user
+        except Exception:
+            pass
+    return current
 
 
 def login_user(user: dict) -> None:
