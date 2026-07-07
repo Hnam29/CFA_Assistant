@@ -115,8 +115,16 @@ def _delete_session_token(token: str) -> None:
 
 def is_logged_in() -> bool:
     if st.session_state.get("logged_in", False):
+        # Re-inject token into URL if a page switch cleared the query params.
+        # This ensures the token is always in the URL so a browser reload works.
+        token = st.session_state.get("session_token")
+        if token and st.query_params.get("sid") != token:
+            try:
+                st.query_params["sid"] = token
+            except Exception:
+                pass
         return True
-    # Try restoring session from query-param token
+    # Try restoring session from URL token (handles reloads)
     try:
         token = st.query_params.get("sid")
         if token:
@@ -124,10 +132,14 @@ def is_logged_in() -> bool:
             if user:
                 st.session_state["logged_in"] = True
                 st.session_state["current_user"] = user
+                st.session_state["session_token"] = token
                 return True
             else:
                 # Invalid/expired token — clean it from URL
-                del st.query_params["sid"]
+                try:
+                    del st.query_params["sid"]
+                except Exception:
+                    pass
     except Exception:
         pass
     return False
@@ -153,20 +165,26 @@ def login_user(user: dict) -> None:
     st.session_state["logged_in"] = True
     st.session_state["current_user"] = user
     token = _create_session_token(user["id"])
+    # Store in session_state so page switches (which clear query_params) don't lose it
+    st.session_state["session_token"] = token
     st.query_params["sid"] = token
 
 
 def logout_user() -> None:
     # Delete the DB token
     try:
-        token = st.query_params.get("sid")
+        token = st.session_state.get("session_token") or st.query_params.get("sid")
         if token:
             _delete_session_token(token)
+        try:
             del st.query_params["sid"]
+        except Exception:
+            pass
     except Exception:
         pass
-    for key in ["logged_in", "current_user", "impersonate_uid", "impersonate_name"]:
+    for key in ["logged_in", "current_user", "session_token", "impersonate_uid", "impersonate_name"]:
         st.session_state.pop(key, None)
+
 
 
 
