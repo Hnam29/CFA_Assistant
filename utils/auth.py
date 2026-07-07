@@ -78,21 +78,56 @@ def validate_email_typos(email: str) -> str | None:
     return None
 
 
-# ── Session state ────────────────────────────────────────────────
+# ── Session state (DB-backed token via st.query_params) ──────────
+
+def _create_session_token(user_id: int) -> str:
+    """Create a login token in the DB and return it."""
+    import uuid
+    from database.db import get_connection
+    token = uuid.uuid4().hex
+    with get_connection() as conn:
+        conn.execute(
+            "INSERT INTO login_tokens (token, user_id) VALUES (?, ?)",
+            (token, user_id),
+        )
+    return token
+
+
+def _validate_session_token(token: str) -> dict | None:
+    """Look up a token in the DB and return the user dict if valid."""
+    from database.db import get_connection, get_user_by_id
+    with get_connection() as conn:
+        row = conn.execute(
+            "SELECT user_id FROM login_tokens WHERE token = ?",
+            (token,),
+        ).fetchone()
+    if row:
+        return get_user_by_id(row["user_id"])
+    return None
+
+
+def _delete_session_token(token: str) -> None:
+    """Remove a token from the DB."""
+    from database.db import get_connection
+    with get_connection() as conn:
+        conn.execute("DELETE FROM login_tokens WHERE token = ?", (token,))
+
 
 def is_logged_in() -> bool:
     if st.session_state.get("logged_in", False):
         return True
-    # Try reading the user cookie synchronously using st.context
+    # Try restoring session from query-param token
     try:
-        saved_username = st.context.cookies.get("cfa_user")
-        if saved_username:
-            from database.db import get_user_by_username
-            user = get_user_by_username(saved_username)
+        token = st.query_params.get("sid")
+        if token:
+            user = _validate_session_token(token)
             if user:
                 st.session_state["logged_in"] = True
                 st.session_state["current_user"] = user
                 return True
+            else:
+                # Invalid/expired token — clean it from URL
+                del st.query_params["sid"]
     except Exception:
         pass
     return False
@@ -117,23 +152,22 @@ def get_current_user() -> dict | None:
 def login_user(user: dict) -> None:
     st.session_state["logged_in"] = True
     st.session_state["current_user"] = user
-    try:
-        from streamlit_cookies_controller import CookieController
-        controller = CookieController()
-        controller.set("cfa_user", user["username"])
-    except Exception:
-        pass
+    token = _create_session_token(user["id"])
+    st.query_params["sid"] = token
 
 
 def logout_user() -> None:
-    for key in ["logged_in", "current_user", "impersonate_uid", "impersonate_name"]:
-        st.session_state.pop(key, None)
+    # Delete the DB token
     try:
-        from streamlit_cookies_controller import CookieController
-        controller = CookieController()
-        controller.remove("cfa_user")
+        token = st.query_params.get("sid")
+        if token:
+            _delete_session_token(token)
+            del st.query_params["sid"]
     except Exception:
         pass
+    for key in ["logged_in", "current_user", "impersonate_uid", "impersonate_name"]:
+        st.session_state.pop(key, None)
+
 
 
 # ── Login / Register UI ──────────────────────────────────────────
@@ -179,11 +213,13 @@ def render_auth_page() -> bool:
                             user = get_user_by_username(username)
                         login_user(user)
                         st.success(f"Welcome Admin, {username}! 🎓")
+                        st.rerun()
                     else:
                         user = get_user_by_username(username)
                         if user and verify_password(password, user["password"]):
                             login_user(user)
                             st.success(f"Welcome back, {username}! 🎓")
+                            st.rerun()
                         else:
                             st.error(t("invalid_credentials"))
 
@@ -220,6 +256,8 @@ def render_auth_page() -> bool:
                         
                         # Save success notification message in session state so we can display it below the form
                         st.session_state["show_welcome_noti"] = new_email
+                        
+                        st.rerun()
                     else:
                         st.error(t("username_taken"))
         

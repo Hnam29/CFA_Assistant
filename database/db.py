@@ -219,6 +219,18 @@ def init_db() -> None:
                     )""")
             except Exception:
                 pass
+        # Create login_tokens table for persistent sessions
+        with get_connection() as conn:
+            try:
+                conn.execute("""
+                    CREATE TABLE IF NOT EXISTS login_tokens (
+                        id SERIAL PRIMARY KEY,
+                        token TEXT NOT NULL UNIQUE,
+                        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )""")
+            except Exception:
+                pass
 
         # Seed default weights in PostgreSQL
         with get_connection() as conn:
@@ -272,6 +284,20 @@ def init_db() -> None:
             """)
         except Exception:
             pass
+        # login_tokens table (SQLite)
+        try:
+            conn.conn.executescript("""
+                CREATE TABLE IF NOT EXISTS login_tokens (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    token TEXT NOT NULL UNIQUE,
+                    user_id INTEGER NOT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                );
+            """)
+        except Exception:
+            pass
+
         for _m in _migrations:
             try:
                 if is_postgres():
