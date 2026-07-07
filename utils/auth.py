@@ -81,7 +81,21 @@ def validate_email_typos(email: str) -> str | None:
 # ── Session state ────────────────────────────────────────────────
 
 def is_logged_in() -> bool:
-    return st.session_state.get("logged_in", False)
+    if st.session_state.get("logged_in", False):
+        return True
+    # Try reading the user cookie synchronously using st.context
+    try:
+        saved_username = st.context.cookies.get("cfa_user")
+        if saved_username:
+            from database.db import get_user_by_username
+            user = get_user_by_username(saved_username)
+            if user:
+                st.session_state["logged_in"] = True
+                st.session_state["current_user"] = user
+                return True
+    except Exception:
+        pass
+    return False
 
 
 def get_current_user() -> dict | None:
@@ -103,11 +117,23 @@ def get_current_user() -> dict | None:
 def login_user(user: dict) -> None:
     st.session_state["logged_in"] = True
     st.session_state["current_user"] = user
+    try:
+        from streamlit_cookies_controller import CookieController
+        controller = CookieController()
+        controller.set("cfa_user", user["username"])
+    except Exception:
+        pass
 
 
 def logout_user() -> None:
-    for key in ["logged_in", "current_user"]:
+    for key in ["logged_in", "current_user", "impersonate_uid", "impersonate_name"]:
         st.session_state.pop(key, None)
+    try:
+        from streamlit_cookies_controller import CookieController
+        controller = CookieController()
+        controller.remove("cfa_user")
+    except Exception:
+        pass
 
 
 # ── Login / Register UI ──────────────────────────────────────────
