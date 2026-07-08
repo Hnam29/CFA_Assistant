@@ -29,6 +29,16 @@ from utils.charts import radar_chart, score_timeline, topic_bar_chart
 from utils.i18n import t
 from datetime import date, datetime, timedelta
 
+def format_datetime_str(val):
+    if not val:
+        return ""
+    if hasattr(val, "strftime"):
+        return val.strftime("%Y-%m-%d %H:%M:%S")
+    val_str = str(val)
+    if "." in val_str:
+        val_str = val_str.split(".")[0]
+    return val_str.replace("T", " ")
+
 st.set_page_config(page_title="Dashboard · CFA Assistant", page_icon="📈", layout="wide")
 
 # Load CSS
@@ -212,7 +222,7 @@ if pending_sessions:
         ps_id = ps["id"]
         ps_topic = ps["topic"]
         ps_type = ps["session_type"]
-        started_time = ps["started_at"]
+        started_time = format_datetime_str(ps["started_at"])
 
         display_type = "Practice" if ps_type.lower() in ("practice", "mixed") else "Mock Exam"
 
@@ -305,143 +315,148 @@ st.markdown("<br>", unsafe_allow_html=True)
 col_left, col_right = st.columns([1.2, 1])
 
 with col_left:
-    st.markdown(f"### {t('performance_radar')}")
-    st.plotly_chart(radar_chart(topic_scores), use_container_width=True, key="radar")
+    with st.container(border=True):
+        st.markdown(f"### {t('performance_radar')}")
+        st.plotly_chart(radar_chart(topic_scores), use_container_width=True, key="radar")
 
-    st.markdown(f"### {t('score_history')}")
-    if sessions:
-        st.plotly_chart(score_timeline(sessions), use_container_width=True, key="timeline")
-    else:
-        st.markdown(
-            f"""<div class="cfa-card" style="text-align:center; color:#64748b; padding:2rem;">
-                {t('no_sessions_yet')}
-            </div>""", unsafe_allow_html=True)
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    with st.container(border=True):
+        st.markdown(f"### {t('score_history')}")
+        if sessions:
+            st.plotly_chart(score_timeline(sessions), use_container_width=True, key="timeline")
+        else:
+            st.markdown(
+                f"""<div style="text-align:center; color:#64748b; padding:2rem;">
+                    {t('no_sessions_yet')}
+                </div>""", unsafe_allow_html=True)
 
 with col_right:
-    # Topic performance bars
-    if topic_perf:
+    with st.container(border=True):
         st.markdown(f"### {t('score_by_topic')}")
-        perf_dict = {p["topic"]: p["avg_score"] for p in topic_perf}
-        st.plotly_chart(topic_bar_chart(perf_dict), use_container_width=True, key="topicbar")
-    else:
-        st.markdown(f"### {t('score_by_topic')}")
-        st.markdown(
-            f"""<div class="cfa-card" style="text-align:center; color:#64748b; padding:2rem;">
-                {t('complete_to_see_scores')}
-            </div>""", unsafe_allow_html=True)
-
-    # ── Feature 2: Compact Upcoming Sessions ────────────────────────
-    st.markdown(f"### {t('upcoming_sessions')}")
-    if upcoming:
-        today_str    = date.today().isoformat()
-        tomorrow_str = (date.today() + timedelta(days=1)).isoformat()
-
-        # Group by date
-        from collections import defaultdict
-        by_date: dict = defaultdict(list)
-        for sess in upcoming:
-            by_date[sess["scheduled_date"]].append(sess)
-
-        # Build topic score lookup for context bars
-        topic_score_lookup = {p["topic"]: p["avg_score"] for p in topic_perf}
-
-        type_icons = {"Practice": "🎯", "Mock Exam": "📝", "Review": "📖"}
-        priority_dots = {"high": "🔴", "medium": "🟡", "low": "🟢"}
-        priority_colors = {"high": "#ef4444", "medium": "#f59e0b", "low": "#10b981"}
-
-        shown = 0
-        for day in sorted(by_date.keys()):
-            if shown >= 5:
-                break
-            if day == today_str:
-                day_label = t("today")
-                header_color = "#6366f1"
-            elif day == tomorrow_str:
-                day_label = t("tomorrow")
-                header_color = "#06b6d4"
-            else:
-                try:
-                    d = datetime.strptime(day, "%Y-%m-%d")
-                    day_label = d.strftime("%A, %b %d")
-                except Exception:
-                    day_label = day
-                header_color = "#475569"
-
+        if topic_perf:
+            perf_dict = {p["topic"]: p["avg_score"] for p in topic_perf}
+            st.plotly_chart(topic_bar_chart(perf_dict), use_container_width=True, key="topicbar")
+        else:
             st.markdown(
-                f"""<div style="font-size:0.75rem; font-weight:700; color:{header_color};
-                                text-transform:uppercase; letter-spacing:0.08em;
-                                margin: 0.8rem 0 0.3rem; padding-bottom:0.2rem;
-                                border-bottom:1px solid #1e293b;">
-                    {day_label}
-                </div>""",
-                unsafe_allow_html=True,
-            )
+                f"""<div style="text-align:center; color:#64748b; padding:2rem;">
+                    {t('complete_to_see_scores')}
+                </div>""", unsafe_allow_html=True)
 
-            for s in by_date[day]:
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    with st.container(border=True):
+        st.markdown(f"### {t('upcoming_sessions')}")
+        if upcoming:
+            today_str    = date.today().isoformat()
+            tomorrow_str = (date.today() + timedelta(days=1)).isoformat()
+
+            # Group by date
+            from collections import defaultdict
+            by_date: dict = defaultdict(list)
+            for sess in upcoming:
+                by_date[sess["scheduled_date"]].append(sess)
+
+            # Build topic score lookup for context bars
+            topic_score_lookup = {p["topic"]: p["avg_score"] for p in topic_perf}
+
+            type_icons = {"Practice": "🎯", "Mock Exam": "📝", "Review": "📖"}
+            priority_dots = {"high": "🔴", "medium": "🟡", "low": "🟢"}
+            priority_colors = {"high": "#ef4444", "medium": "#f59e0b", "low": "#10b981"}
+
+            shown = 0
+            for day in sorted(by_date.keys()):
                 if shown >= 5:
                     break
-                priority     = s.get("priority", "medium")
-                session_type = s.get("session_type", "Practice")
-                icon         = type_icons.get(session_type, "📚")
-                dot          = priority_dots.get(priority, "🟡")
-                pcolor       = priority_colors.get(priority, "#f59e0b")
-                topic_name   = s["topic"]
-                # Truncate long topic names
-                display_topic = topic_name if len(topic_name) <= 28 else topic_name[:25] + "\u2026"
+                if day == today_str:
+                    day_label = t("today")
+                    header_color = "#6366f1"
+                elif day == tomorrow_str:
+                    day_label = t("tomorrow")
+                    header_color = "#06b6d4"
+                else:
+                    try:
+                        d = datetime.strptime(day, "%Y-%m-%d")
+                        day_label = d.strftime("%A, %b %d")
+                    except Exception:
+                        day_label = day
+                    header_color = "#475569"
 
-                # Context bar: build as plain string to avoid nested f-string issues
-                tscore = topic_score_lookup.get(topic_name, None)
-                bar_section = ""
-                if tscore is not None:
-                    bcolor = "#10b981" if tscore >= 70 else "#f59e0b" if tscore >= 50 else "#ef4444"
-                    pct = int(min(tscore, 100))
-                    sc  = int(tscore)
-                    bar_section = (
-                        '<div style="display:flex;align-items:center;gap:0.4rem;margin-top:0.25rem;">'
-                        '<div style="flex:1;height:3px;background:#0f172a;border-radius:2px;overflow:hidden;">'
-                        '<div style="width:' + str(pct) + '%;height:100%;background:' + bcolor + ';border-radius:2px;"></div>'
+                st.markdown(
+                    f"""<div style="font-size:0.75rem; font-weight:700; color:{header_color};
+                                    text-transform:uppercase; letter-spacing:0.08em;
+                                    margin: 0.8rem 0 0.3rem; padding-bottom:0.2rem;
+                                    border-bottom:1px solid #1e293b;">
+                        {day_label}
+                    </div>""",
+                    unsafe_allow_html=True,
+                )
+
+                for s in by_date[day]:
+                    if shown >= 5:
+                        break
+                    priority     = s.get("priority", "medium")
+                    session_type = s.get("session_type", "Practice")
+                    icon         = type_icons.get(session_type, "📚")
+                    dot          = priority_dots.get(priority, "🟡")
+                    pcolor       = priority_colors.get(priority, "#f59e0b")
+                    topic_name   = s["topic"]
+                    # Truncate long topic names
+                    display_topic = topic_name if len(topic_name) <= 28 else topic_name[:25] + "\u2026"
+
+                    # Context bar
+                    tscore = topic_score_lookup.get(topic_name, None)
+                    bar_section = ""
+                    if tscore is not None:
+                        bcolor = "#10b981" if tscore >= 70 else "#f59e0b" if tscore >= 50 else "#ef4444"
+                        pct = int(min(tscore, 100))
+                        sc  = int(tscore)
+                        bar_section = (
+                            '<div style="display:flex;align-items:center;gap:0.4rem;margin-top:0.25rem;">'
+                            '<div style="flex:1;height:3px;background:#0f172a;border-radius:2px;overflow:hidden;">'
+                            '<div style="width:' + str(pct) + '%;height:100%;background:' + bcolor + ';border-radius:2px;"></div>'
+                            '</div>'
+                            '<span style="font-size:0.65rem;color:' + bcolor + ';font-weight:700;min-width:2rem;">' + str(sc) + '%</span>'
+                            '</div>'
+                        )
+
+                    card_html = (
+                        '<div style="background:#1e293b;border:1px solid #334155;border-left:3px solid ' + pcolor + ';'
+                        'border-radius:6px;padding:0.5rem 0.75rem;margin-bottom:0.3rem;">'
+                        '<div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;">'
+                        '<div style="flex:1;min-width:0;">'
+                        '<span style="font-size:0.82rem;font-weight:600;color:#f1f5f9;white-space:nowrap;'
+                        'overflow:hidden;text-overflow:ellipsis;display:block;">' + icon + ' ' + display_topic + '</span>'
+                        '<span style="font-size:0.7rem;color:#64748b;">' + session_type + '</span>'
                         '</div>'
-                        '<span style="font-size:0.65rem;color:' + bcolor + ';font-weight:700;min-width:2rem;">' + str(sc) + '%</span>'
+                        '<span style="font-size:0.8rem;">' + dot + '</span>'
+                        '</div>'
+                        + bar_section +
                         '</div>'
                     )
+                    st.markdown(card_html, unsafe_allow_html=True)
+                    shown += 1
 
-                card_html = (
-                    '<div style="background:#1e293b;border:1px solid #334155;border-left:3px solid ' + pcolor + ';'
-                    'border-radius:6px;padding:0.5rem 0.75rem;margin-bottom:0.3rem;">'
-                    '<div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;">'
-                    '<div style="flex:1;min-width:0;">'
-                    '<span style="font-size:0.82rem;font-weight:600;color:#f1f5f9;white-space:nowrap;'
-                    'overflow:hidden;text-overflow:ellipsis;display:block;">' + icon + ' ' + display_topic + '</span>'
-                    '<span style="font-size:0.7rem;color:#64748b;">' + session_type + '</span>'
-                    '</div>'
-                    '<span style="font-size:0.8rem;">' + dot + '</span>'
-                    '</div>'
-                    + bar_section +
-                    '</div>'
+            # "View all" link if more than 5
+            if len(upcoming) > 5:
+                remaining = len(upcoming) - 5
+                st.markdown(
+                    f"""<div style="text-align:right; margin-top:0.2rem;">
+                        <span style="font-size:0.75rem; color:#6366f1; cursor:pointer;">
+                            +{remaining} more
+                        </span>
+                    </div>""",
+                    unsafe_allow_html=True,
                 )
-                st.markdown(card_html, unsafe_allow_html=True)
-                shown += 1
-
-        # "View all" link if more than 5
-        if len(upcoming) > 5:
-            remaining = len(upcoming) - 5
+            if st.button(t("view_all_sessions"), key="go_schedule_view", use_container_width=True):
+                st.switch_page("pages/5_Schedule.py")
+        else:
             st.markdown(
-                f"""<div style="text-align:right; margin-top:0.2rem;">
-                    <span style="font-size:0.75rem; color:#6366f1; cursor:pointer;">
-                        +{remaining} more
-                    </span>
-                </div>""",
-                unsafe_allow_html=True,
-            )
-        if st.button(t("view_all_sessions"), key="go_schedule_view", use_container_width=True):
-            st.switch_page("pages/5_Schedule.py")
-    else:
-        st.markdown(
-            f"""<div class="cfa-card" style="text-align:center; color:#64748b; padding:1.5rem;">
-                {t('no_sessions_scheduled')}
-            </div>""", unsafe_allow_html=True)
-        if st.button(t("generate_study_plan"), key="go_schedule"):
-            st.switch_page("pages/5_Schedule.py")
+                f"""<div style="text-align:center; color:#64748b; padding:1.5rem;">
+                    {t('no_sessions_scheduled')}
+                </div>""", unsafe_allow_html=True)
+            if st.button(t("generate_study_plan"), key="go_schedule"):
+                st.switch_page("pages/5_Schedule.py")
 
 
 # ── Feature 4: Topics Needing Attention — deep-dive ───────────────
