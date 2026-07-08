@@ -27,6 +27,83 @@ css = Path(__file__).parent.parent / "assets" / "styles.css"
 if css.exists():
     st.markdown(f"<style>{css.read_text()}</style>", unsafe_allow_html=True)
 
+def draw_html_calendar(pending_sessions):
+    import calendar
+    from datetime import date
+    
+    today = date.today()
+    yr, mo = today.year, today.month
+    
+    # Group pending sessions by date
+    sessions_by_date = {}
+    for s in pending_sessions:
+        raw_d = s.get("scheduled_date", "")
+        d_str = raw_d.isoformat() if hasattr(raw_d, "isoformat") else str(raw_d)[:10]
+        if d_str not in sessions_by_date:
+            sessions_by_date[d_str] = []
+        sessions_by_date[d_str].append(s)
+        
+    cal = calendar.Calendar(firstweekday=6) # Sunday start
+    month_days = cal.monthdayscalendar(yr, mo)
+    month_name = today.strftime("%B %Y")
+    
+    html = f"""
+    <div style="background:#0f172a; border:1px solid #1e293b; border-radius:14px; padding:1.25rem; margin-bottom:1.5rem;">
+        <h4 style="color:#f1f5f9; margin:0 0 1rem 0; font-size:1.05rem; display:flex; align-items:center; gap:0.5rem;">
+            📅 Scheduled Sessions Calendar ({month_name})
+        </h4>
+        <div style="display:grid; grid-template-columns: repeat(7, 1fr); gap:6px; text-align:center; font-size:0.8rem; font-weight:600; color:#64748b; margin-bottom:6px;">
+            <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+        </div>
+        <div style="display:grid; gap:6px;">
+    """
+    
+    for week in month_days:
+        html += '<div style="display:grid; grid-template-columns: repeat(7, 1fr); gap:6px;">'
+        for day in week:
+            if day == 0:
+                html += '<div style="background:transparent; min-height:55px;"></div>'
+            else:
+                curr_date_str = f"{yr}-{mo:02d}-{day:02d}"
+                day_sessions = sessions_by_date.get(curr_date_str, [])
+                
+                # Check if it's today
+                is_today = (day == today.day)
+                bg = "rgba(99,102,241,0.1)" if is_today else "#1e293b"
+                border = "1px solid #6366f1" if is_today else "1px solid #334155"
+                
+                dots_html = ""
+                for s in day_sessions:
+                    stype = s.get("session_type", "Practice")
+                    # Color code: Practice = indigo (#6366f1), Mock Exam = purple/blue (#a855f7), Review = green (#10b981)
+                    color = "#6366f1"
+                    if stype == "Mock Exam":
+                        color = "#a855f7"
+                    elif stype == "Review":
+                        color = "#10b981"
+                    dots_html += f'<div style="background:{color}; width:6px; height:6px; border-radius:50%; display:inline-block; margin:1px;" title="{stype}: {s.get("topic")}"></div>'
+                
+                html += f"""
+                <div style="background:{bg}; border:{border}; border-radius:8px; min-height:55px; padding:4px; display:flex; flex-direction:column; justify-content:space-between; align-items:center; position:relative;">
+                    <span style="font-weight:700; color:{'#6366f1' if is_today else '#f1f5f9'}; font-size:0.8rem;">{day}</span>
+                    <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:2px; max-width:100%; overflow:hidden; padding-bottom:2px;">
+                        {dots_html}
+                    </div>
+                </div>
+                """
+        html += '</div>'
+        
+    html += """
+        </div>
+        <div style="display:flex; gap:1.2rem; font-size:0.75rem; color:#94a3b8; margin-top:0.8rem; justify-content:center; border-top:1px solid #1e293b; padding-top:0.8rem;">
+            <div style="display:flex; align-items:center; gap:4px;"><div style="background:#6366f1; width:7px; height:7px; border-radius:50%;"></div> Practice</div>
+            <div style="display:flex; align-items:center; gap:4px;"><div style="background:#a855f7; width:7px; height:7px; border-radius:50%;"></div> Mock Exam</div>
+            <div style="display:flex; align-items:center; gap:4px;"><div style="background:#10b981; width:7px; height:7px; border-radius:50%;"></div> Review</div>
+        </div>
+    </div>
+    """
+    return html
+
 # Kanban CSS
 st.markdown("""
 <style>
@@ -238,6 +315,12 @@ with st.expander("⚙️ Generate / Add Study Plan", expanded=False):
         if "ai_insights" in st.session_state:
             st.markdown(st.session_state["ai_insights"])
 
+
+# ─────────────────────────────────────────────────────────────────
+# CALENDAR
+# ─────────────────────────────────────────────────────────────────
+st.markdown(draw_html_calendar(all_by_status.get("pending", [])), unsafe_allow_html=True)
+
 # ─────────────────────────────────────────────────────────────────
 # KANBAN BOARD
 # ─────────────────────────────────────────────────────────────────
@@ -336,6 +419,16 @@ for col_idx, col_def in enumerate(COLUMNS):
 
                 # Action buttons below each card
                 if col_def["key"] == "pending":
+                    if st.button("🚀 Start Test", key=f"start_{s['id']}", type="primary", use_container_width=True):
+                        st.session_state["schedule_launch"] = {
+                            "topic": s["topic"],
+                            "session_type": s["session_type"],
+                        }
+                        if s["session_type"].strip() == "Mock Exam":
+                            st.switch_page("pages/3_Mock_Exam.py")
+                        else:
+                            st.switch_page("pages/2_Practice.py")
+                            
                     btn_c1, btn_c2 = st.columns(2)
                     with btn_c1:
                         if st.button("✓ Done", key=f"done_{s['id']}", use_container_width=True):

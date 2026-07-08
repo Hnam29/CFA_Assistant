@@ -16,7 +16,7 @@ from database.db import (
     save_question, save_answer, upsert_topic_performance,
     get_topic_performance, get_curriculum_weights,
     is_premium_user, save_session_state, get_pending_sessions,
-    discard_session,
+    discard_session, get_bank_stats,
 )
 from utils.auth import is_logged_in, get_current_user, render_auth_page
 from utils.cfa_topics import TOPIC_NAMES, TOPIC_WEIGHTS, CFA_TOPICS
@@ -56,6 +56,84 @@ for key, default in [
 ]:
     if key not in st.session_state:
         st.session_state[key] = default
+
+# ── Auto-launch from Scheduler ───────────────────────────────────
+if "schedule_launch" in st.session_state:
+    launch_info = st.session_state.pop("schedule_launch")
+    
+    with st.spinner("🚀 Initializing mock exam from scheduler..."):
+        try:
+            topic_perf = get_topic_performance(uid)
+            db_weights = get_curriculum_weights()
+            total_w = sum(db_weights.values()) or 1
+            weights = {t: db_weights[t] / total_w for t in TOPIC_NAMES}
+            
+            _bank_stats = get_bank_stats()
+            has_bank = any(_bank_stats.values())
+            use_bank_only = has_bank
+            
+            num_q = 90 if use_bank_only else 20  # Limit to 20 Qs online to be very fast and safe
+            
+            all_qs = []
+            for topic, weight in weights.items():
+                n = max(1, round(num_q * weight))
+                try:
+                    qs = generate_questions(
+                        topic=topic,
+                        difficulty="Medium",
+                        count=n,
+                        use_bank_only=use_bank_only
+                    )
+                    all_qs.extend(qs)
+                except Exception:
+                    continue
+                if len(all_qs) >= num_q:
+                    break
+                    
+            if 0 < len(all_qs) < num_q and use_bank_only:
+                deficit = num_q - len(all_qs)
+                sorted_topics = sorted(weights.keys(), key=lambda t: weights[t], reverse=True)
+                seen_texts = {q["question"].strip().lower() for q in all_qs if "question" in q}
+                for topic in sorted_topics:
+                    if deficit <= 0:
+                        break
+                    try:
+                        extra_qs = generate_questions(
+                            topic=topic,
+                            difficulty="Medium",
+                            count=deficit + 10,
+                            use_bank_only=True
+                        )
+                        for eq in extra_qs:
+                            eq_text = eq["question"].strip().lower()
+                            if eq_text not in seen_texts:
+                                seen_texts.add(eq_text)
+                                all_qs.append(eq)
+                                deficit -= 1
+                                if deficit <= 0:
+                                    break
+                    except Exception:
+                        continue
+            
+            if all_qs:
+                random.shuffle(all_qs)
+                all_qs = all_qs[:num_q]
+                session_id = create_session(uid, "Mixed", "mock")
+                st.session_state.exam_questions    = all_qs
+                st.session_state.exam_answers      = {}
+                st.session_state.exam_started      = True
+                st.session_state.exam_submitted    = False
+                st.session_state.exam_start_time   = time.time()
+                st.session_state.exam_duration_mins = len(all_qs) * 1.5
+                st.session_state.exam_session_id   = session_id
+                st.session_state.exam_current_idx  = 0
+                st.session_state.exam_flags        = set()
+                st.session_state.exam_confirm_submit = False
+                st.rerun()
+            else:
+                st.error("Could not find or generate questions for the mock exam.")
+        except Exception as e:
+            st.error(f"Failed to auto-start mock exam: {e}")
 
 # ── Header ────────────────────────────────────────────────────────
 st.markdown(

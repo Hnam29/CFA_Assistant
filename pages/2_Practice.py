@@ -63,6 +63,40 @@ if "practice_timer_secs" not in st.session_state:
 if "practice_radio_versions" not in st.session_state:
     st.session_state.practice_radio_versions = {}
 
+# ── Auto-launch from Scheduler ───────────────────────────────────
+if "schedule_launch" in st.session_state:
+    launch_info = st.session_state.pop("schedule_launch")
+    target_topic = launch_info.get("topic")
+    if target_topic:
+        _bank_stats = get_bank_stats()
+        topic_count = _bank_stats.get(target_topic, 0)
+        use_bank = (topic_count > 0)
+        
+        with st.spinner(f"🚀 Auto-generating session for {target_topic}..."):
+            try:
+                questions = generate_questions(
+                    topic=target_topic,
+                    subtopics=None,
+                    difficulty="Medium",
+                    count=10,
+                    use_bank_only=use_bank,
+                )
+                if questions:
+                    session_id = create_session(uid, target_topic, "practice")
+                    st.session_state.practice_questions = questions
+                    st.session_state.practice_answers = {}
+                    st.session_state.practice_submitted = False
+                    st.session_state.practice_session_id = session_id
+                    st.session_state.practice_start_time = time.time()
+                    st.session_state.practice_current_idx = 0
+                    st.session_state.practice_flags = set()
+                    st.session_state.practice_confirm_submit = False
+                    st.session_state.practice_timer_secs = len(questions) * 90
+                    st.session_state.practice_radio_versions = {}
+                    st.rerun()
+            except Exception as e:
+                st.error(f"Failed to auto-start scheduled session: {e}")
+
 # ── Header ────────────────────────────────────────────────────────
 st.markdown(
     """
