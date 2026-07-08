@@ -246,7 +246,7 @@ if not st.session_state.practice_questions:
                     <div class="section-header">💡 How Practice Modes Work</div>
                     <strong style="color:#f1f5f9; display:block; margin-top:0.8rem;">🔌 Question Bank (Offline)</strong>
                     <ul style="color:#94a3b8; font-size:0.85rem; line-height:1.6; padding-left:1.2rem; margin-top:0.3rem;">
-                        <li>Runs completely offline using the pre-loaded 720-question bank</li>
+                        <li>Runs completely offline using the pre-loaded CFA question bank</li>
                         <li>Bypasses AI API usage and keys entirely</li>
                         <li>Great for standard prep and mock simulation</li>
                     </ul>
@@ -258,7 +258,7 @@ if not st.session_state.practice_questions:
                     </ul>
                     <hr style="border-color:#334155; margin:0.8rem 0 !important;">
                     <div style="color:#64748b; font-size:0.8rem;">
-                        🔑 <strong style="color:#94a3b8;">Tip:</strong> The 720Q question bank is pre-loaded by default. You can also upload your own questions to expand it!
+                        🔑 <strong style="color:#94a3b8;">Tip:</strong> The CFA question bank is pre-loaded by default. You can also upload your own questions to expand it!
                     </div>
                 </div>
                 """,
@@ -314,7 +314,7 @@ if not st.session_state.practice_questions:
                 """,
                 unsafe_allow_html=True,
             )
-            st.write("Upload an Excel (`.xlsx`) or CSV (`.csv`) file to add more custom questions. By default, the system is pre-loaded with the 720-question bank.")
+            st.write("Upload an Excel (`.xlsx`) or CSV (`.csv`) file to add more custom questions. By default, the system is pre-loaded with the CFA question bank.")
 
             # Built-in template Excel download button
             template_data = {
