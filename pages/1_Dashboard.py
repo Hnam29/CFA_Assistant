@@ -313,7 +313,7 @@ st.markdown("<br>", unsafe_allow_html=True)
 
 # ── Main content ──────────────────────────────────────────────────
 # Row 1: Radar and Topic Bars (Height: 360px)
-row1_col1, row1_col2 = st.columns([1, 1])
+row1_col1, row1_col2 = st.columns([1.2, 0.8])
 
 with row1_col1:
     with st.container(border=True):
@@ -343,7 +343,7 @@ with row1_col2:
 st.markdown("<br>", unsafe_allow_html=True)
 
 # Row 2: Timeline and Upcoming Sessions (Height: 280px)
-row2_col1, row2_col2 = st.columns([1, 1])
+row2_col1, row2_col2 = st.columns([1.2, 0.8])
 
 with row2_col1:
     with st.container(border=True):
@@ -380,9 +380,9 @@ with row2_col2:
             priority_dots = {"high": "🔴", "medium": "🟡", "low": "🟢"}
             priority_colors = {"high": "#ef4444", "medium": "#f59e0b", "low": "#10b981"}
 
-            # Scrollable container matching history chart height (280px minus headers)
-            st.markdown('<div style="max-height:220px; min-height:220px; overflow-y:auto; padding-right:5px; margin-bottom: 0.5rem;">', unsafe_allow_html=True)
-            shown = 0
+            # Build a single unified HTML block to avoid Streamlit rendering blank spaces
+            upcoming_html = '<div style="max-height:220px; min-height:220px; overflow-y:auto; padding-right:5px; margin-bottom: 0.5rem;">'
+            
             for day in sorted(by_date.keys()):
                 if day == today_str:
                     day_label = t("today")
@@ -398,15 +398,14 @@ with row2_col2:
                         day_label = day
                     header_color = "#475569"
 
-                st.markdown(
-                    f"""<div style="font-size:0.75rem; font-weight:700; color:{header_color};
-                                    text-transform:uppercase; letter-spacing:0.08em;
-                                    margin: 0.8rem 0 0.3rem; padding-bottom:0.2rem;
-                                    border-bottom:1px solid #1e293b;">
-                        {day_label}
-                    </div>""",
-                    unsafe_allow_html=True,
-                )
+                upcoming_html += f"""
+                <div style="font-size:0.75rem; font-weight:700; color:{header_color};
+                            text-transform:uppercase; letter-spacing:0.08em;
+                            margin: 0.8rem 0 0.3rem; padding-bottom:0.2rem;
+                            border-bottom:1px solid #1e293b;">
+                    {day_label}
+                </div>
+                """
 
                 for s in by_date[day]:
                     priority     = s.get("priority", "medium")
@@ -415,7 +414,6 @@ with row2_col2:
                     dot          = priority_dots.get(priority, "🟡")
                     pcolor       = priority_colors.get(priority, "#f59e0b")
                     topic_name   = s["topic"]
-                    # Truncate long topic names
                     display_topic = topic_name if len(topic_name) <= 28 else topic_name[:25] + "\u2026"
 
                     # Context bar
@@ -425,32 +423,33 @@ with row2_col2:
                         bcolor = "#10b981" if tscore >= 70 else "#f59e0b" if tscore >= 50 else "#ef4444"
                         pct = int(min(tscore, 100))
                         sc  = int(tscore)
-                        bar_section = (
-                            '<div style="display:flex;align-items:center;gap:0.4rem;margin-top:0.25rem;">'
-                            '<div style="flex:1;height:3px;background:#0f172a;border-radius:2px;overflow:hidden;">'
-                            '<div style="width:' + str(pct) + '%;height:100%;background:' + bcolor + ';border-radius:2px;"></div>'
-                            '</div>'
-                            '<span style="font-size:0.65rem;color:' + bcolor + ';font-weight:700;min-width:2rem;">' + str(sc) + '%</span>'
-                            '</div>'
-                        )
+                        bar_section = f"""
+                        <div style="display:flex;align-items:center;gap:0.4rem;margin-top:0.25rem;">
+                            <div style="flex:1;height:3px;background:#0f172a;border-radius:2px;overflow:hidden;">
+                                <div style="width:{pct}%;height:100%;background:{bcolor};border-radius:2px;"></div>
+                            </div>
+                            <span style="font-size:0.65rem;color:{bcolor};font-weight:700;min-width:2rem;">{sc}%</span>
+                        </div>
+                        """
 
-                    card_html = (
-                        '<div style="background:#1e293b;border:1px solid #334155;border-left:3px solid ' + pcolor + ';'
-                        'border-radius:6px;padding:0.5rem 0.75rem;margin-bottom:0.3rem;">'
-                        '<div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;">'
-                        '<div style="flex:1;min-width:0;">'
-                        '<span style="font-size:0.82rem;font-weight:600;color:#f1f5f9;white-space:nowrap;'
-                        'overflow:hidden;text-overflow:ellipsis;display:block;">' + icon + ' ' + display_topic + '</span>'
-                        '<span style="font-size:0.7rem;color:#64748b;">' + session_type + '</span>'
-                        '</div>'
-                        '<span style="font-size:0.8rem;">' + dot + '</span>'
-                        '</div>'
-                        + bar_section +
-                        '</div>'
-                    )
-                    st.markdown(card_html, unsafe_allow_html=True)
-                    shown += 1
-            st.markdown('</div>', unsafe_allow_html=True)
+                    upcoming_html += f"""
+                    <div style="background:#1e293b;border:1px solid #334155;border-left:3px solid {pcolor};
+                                border-radius:6px;padding:0.5rem 0.75rem;margin-bottom:0.3rem;">
+                        <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;">
+                            <div style="flex:1;min-width:0;">
+                                <span style="font-size:0.82rem;font-weight:600;color:#f1f5f9;white-space:nowrap;
+                                            overflow:hidden;text-overflow:ellipsis;display:block;">
+                                    {icon} {display_topic}
+                                </span>
+                                <span style="font-size:0.7rem;color:#64748b;">{session_type}</span>
+                            </div>
+                            <span style="font-size:0.8rem;">{dot}</span>
+                        </div>
+                        {bar_section}
+                    </div>
+                    """
+            upcoming_html += '</div>'
+            st.markdown(upcoming_html, unsafe_allow_html=True)
 
             if st.button(t("view_all_sessions"), key="go_schedule_view", use_container_width=True):
                 st.switch_page("pages/5_Schedule.py")
