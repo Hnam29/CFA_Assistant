@@ -48,7 +48,54 @@ def draw_html_calendar(pending_sessions):
     month_name = today.strftime("%B %Y")
     
     html = f"""
-    <div style="background:#0f172a; border:1px solid #1e293b; border-radius:14px; padding:1rem; margin:0 auto 1.5rem auto; max-width:640px; box-shadow:0 4px 20px rgba(0,0,0,0.15);">
+    <style>
+    .cal-day-box {{
+        position: relative;
+        cursor: pointer;
+    }}
+    .cal-tooltip {{
+        position: absolute;
+        bottom: 105%;
+        left: 50%;
+        transform: translateX(-50%) translateY(5px);
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 8px;
+        padding: 0.5rem 0.7rem;
+        width: 200px;
+        color: #f1f5f9;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+        z-index: 9999;
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transition: opacity 0.15s ease, transform 0.15s ease;
+    }}
+    .cal-day-box:hover .cal-tooltip {{
+        opacity: 1;
+        visibility: visible;
+        transform: translateX(-50%) translateY(0);
+    }}
+    .cal-tooltip-title {{
+        font-weight: 700;
+        font-size: 0.7rem;
+        border-bottom: 1px solid #334155;
+        padding-bottom: 4px;
+        margin-bottom: 5px;
+        color: #94a3b8;
+        text-align: left;
+    }}
+    .cal-tooltip-item {{
+        font-size: 0.7rem;
+        margin-bottom: 4px;
+        line-height: 1.3;
+        display: flex;
+        align-items: flex-start;
+        gap: 5px;
+        text-align: left;
+    }}
+    </style>
+    <div style="background:#0f172a; border:1px solid #1e293b; border-radius:14px; padding:1rem; margin:0 auto 1.5rem auto; max-width:640px; box-shadow:0 4px 20px rgba(0,0,0,0.15); overflow:visible;">
         <h4 style="color:#f1f5f9; margin:0 0 0.75rem 0; font-size:0.95rem; display:flex; align-items:center; gap:0.4rem; font-weight:700;">
             📅 Scheduled Sessions Calendar ({month_name})
         </h4>
@@ -73,22 +120,39 @@ def draw_html_calendar(pending_sessions):
                 border = "1px solid #6366f1" if is_today else "1px solid #334155"
                 
                 dots_html = ""
+                tooltip_items_html = ""
                 for s in day_sessions:
                     stype = s.get("session_type", "Practice")
-                    # Color code: Practice = indigo (#6366f1), Mock Exam = purple/blue (#a855f7), Review = green (#10b981)
-                    color = "#6366f1"
+                    # Color code: Practice = yellow (#f59e0b), Mock Exam = purple/blue (#a855f7), Review = green (#10b981)
+                    color = "#f59e0b"
+                    icon = "🎯"
                     if stype == "Mock Exam":
                         color = "#a855f7"
+                        icon = "📝"
                     elif stype == "Review":
                         color = "#10b981"
-                    dots_html += f'<div style="background:{color}; width:5px; height:5px; border-radius:50%; display:inline-block; margin:1px;" title="{stype}: {s.get("topic")}"></div>'
+                        icon = "📖"
+                    dots_html += f'<div style="background:{color}; width:5px; height:5px; border-radius:50%; display:inline-block; margin:1px;"></div>'
+                    tooltip_items_html += f'<div class="cal-tooltip-item"><span style="color:{color};">{icon}</span><span><strong>{s.get("topic")}</strong><br/><span style="color:#64748b; font-size:0.65rem;">{stype}</span></span></div>'
+                
+                tooltip_html = ""
+                if day_sessions:
+                    d_obj = date(yr, mo, day)
+                    date_label = d_obj.strftime("%a, %b %d")
+                    tooltip_html = f"""
+                    <div class="cal-tooltip">
+                        <div class="cal-tooltip-title">📅 Plans for {date_label}</div>
+                        {tooltip_items_html}
+                    </div>
+                    """
                 
                 html += f"""
-                <div style="background:{bg}; border:{border}; border-radius:6px; min-height:42px; padding:2px; display:flex; flex-direction:column; justify-content:space-between; align-items:center; position:relative;">
+                <div class="cal-day-box" style="background:{bg}; border:{border}; border-radius:6px; min-height:42px; padding:2px; display:flex; flex-direction:column; justify-content:space-between; align-items:center;">
                     <span style="font-weight:700; color:{'#6366f1' if is_today else '#f1f5f9'}; font-size:0.75rem;">{day}</span>
                     <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:1px; max-width:100%; overflow:hidden; padding-bottom:1px;">
                         {dots_html}
                     </div>
+                    {tooltip_html}
                 </div>
                 """
         html += '</div>'
@@ -96,7 +160,7 @@ def draw_html_calendar(pending_sessions):
     html += """
         </div>
         <div style="display:flex; gap:1rem; font-size:0.7rem; color:#94a3b8; margin-top:0.6rem; justify-content:center; border-top:1px solid #1e293b; padding-top:0.6rem;">
-            <div style="display:flex; align-items:center; gap:4px;"><div style="background:#6366f1; width:6px; height:6px; border-radius:50%;"></div> Practice</div>
+            <div style="display:flex; align-items:center; gap:4px;"><div style="background:#f59e0b; width:6px; height:6px; border-radius:50%;"></div> Practice</div>
             <div style="display:flex; align-items:center; gap:4px;"><div style="background:#a855f7; width:6px; height:6px; border-radius:50%;"></div> Mock Exam</div>
             <div style="display:flex; align-items:center; gap:4px;"><div style="background:#10b981; width:6px; height:6px; border-radius:50%;"></div> Review</div>
         </div>
