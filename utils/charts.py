@@ -162,13 +162,13 @@ def cfa_score_report_chart(topic_perf_list: List[Dict]) -> go.Figure:
     ]
     
     labels_map = {
-        "Ethical and Professional Standards": "Ethical & Professional<br>Standards<br>(15-20%)",
+        "Ethical and Professional Standards": "Ethical<br>and<br>Professional<br>Standards<br>(15-20%)",
         "Quantitative Methods": "Quantitative<br>Methods<br>(6-9%)",
         "Economics": "Economics<br>(6-9%)",
-        "Financial Statement Analysis": "Financial Statement<br>Analysis<br>(11-14%)",
-        "Corporate Finance": "Corporate Finance<br>(6-9%)",
+        "Financial Statement Analysis": "Financial<br>Statement<br>Analysis<br>(11-14%)",
+        "Corporate Finance": "Corporate<br>Finance<br>(6-9%)",
         "Equities": "Equities<br>(11-14%)",
-        "Fixed Income": "Fixed Income<br>(11-14%)",
+        "Fixed Income": "Fixed<br>Income<br>(11-14%)",
         "Derivatives": "Derivatives<br>(5-8%)",
         "Alternative Investments": "Alternative<br>Investments<br>(7-10%)",
         "Portfolio Management": "Portfolio<br>Management<br>(8-12%)"
@@ -212,13 +212,13 @@ def cfa_score_report_chart(topic_perf_list: List[Dict]) -> go.Figure:
         
     fig = go.Figure()
     
-    # 1. Likely range box
+    # 1. Likely range box (Vibrant sky blue)
     fig.add_trace(go.Bar(
         x=x_data,
         y=y_range_len,
         base=y_base,
-        marker_color="rgba(191, 219, 254, 0.45)",
-        marker_line=dict(color="rgba(147, 197, 253, 0.6)", width=1),
+        marker_color="rgba(56, 189, 248, 0.7)",
+        marker_line=dict(color="rgba(14, 165, 233, 0.9)", width=1.5),
         width=0.4,
         name="Likely Score Range",
         hoverinfo="none"
@@ -232,7 +232,7 @@ def cfa_score_report_chart(topic_perf_list: List[Dict]) -> go.Figure:
         marker=dict(
             symbol="line-ew",
             size=22,
-            line=dict(color="#64748b", width=2, dash="dot")
+            line=dict(color="#94a3b8", width=2, dash="dot")
         ),
         name="Topic Administration Avg"
     ))
@@ -245,7 +245,7 @@ def cfa_score_report_chart(topic_perf_list: List[Dict]) -> go.Figure:
         marker=dict(
             symbol="line-ew",
             size=26,
-            line=dict(color="#f1f5f9", width=4)
+            line=dict(color="#f1f5f9", width=4.5)
         ),
         name="Your Score"
     ))
@@ -257,7 +257,7 @@ def cfa_score_report_chart(topic_perf_list: List[Dict]) -> go.Figure:
     fig.update_layout(
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(color="#94a3b8", size=9),
+        font=dict(color="#94a3b8", size=8),
         yaxis=dict(
             range=[30, 100], 
             gridcolor="#1e293b", 
@@ -267,10 +267,12 @@ def cfa_score_report_chart(topic_perf_list: List[Dict]) -> go.Figure:
             title="Score (%)"
         ),
         xaxis=dict(
-            gridcolor="rgba(0,0,0,0)"
+            gridcolor="rgba(0,0,0,0)",
+            tickangle=0,
+            tickfont=dict(size=7.5)
         ),
-        margin=dict(l=40, r=40, t=10, b=30),
-        height=320,
+        margin=dict(l=40, r=40, t=10, b=50),
+        height=370,
         showlegend=True,
         legend=dict(
             orientation="h",
