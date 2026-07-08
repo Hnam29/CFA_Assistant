@@ -318,14 +318,22 @@ row1_col1, row1_col2 = st.columns([1, 1])
 with row1_col1:
     with st.container(border=True):
         st.markdown(f"### {t('performance_radar')}")
-        st.plotly_chart(radar_chart(topic_scores, height=360), use_container_width=True, key="radar")
+        try:
+            r_fig = radar_chart(topic_scores, height=360)
+        except TypeError:
+            r_fig = radar_chart(topic_scores)
+        st.plotly_chart(r_fig, use_container_width=True, key="radar")
 
 with row1_col2:
     with st.container(border=True):
         st.markdown(f"### {t('score_by_topic')}")
         if topic_perf:
             perf_dict = {p["topic"]: p["avg_score"] for p in topic_perf}
-            st.plotly_chart(topic_bar_chart(perf_dict, height=360), use_container_width=True, key="topicbar")
+            try:
+                tb_fig = topic_bar_chart(perf_dict, height=360)
+            except TypeError:
+                tb_fig = topic_bar_chart(perf_dict)
+            st.plotly_chart(tb_fig, use_container_width=True, key="topicbar")
         else:
             st.markdown(
                 f"""<div style="display:flex; align-items:center; justify-content:center; height:360px; color:#64748b;">
@@ -341,7 +349,11 @@ with row2_col1:
     with st.container(border=True):
         st.markdown(f"### {t('score_history')}")
         if sessions:
-            st.plotly_chart(score_timeline(sessions, height=280), use_container_width=True, key="timeline")
+            try:
+                tl_fig = score_timeline(sessions, height=280)
+            except TypeError:
+                tl_fig = score_timeline(sessions)
+            st.plotly_chart(tl_fig, use_container_width=True, key="timeline")
         else:
             st.markdown(
                 f"""<div style="display:flex; align-items:center; justify-content:center; height:280px; color:#64748b;">
