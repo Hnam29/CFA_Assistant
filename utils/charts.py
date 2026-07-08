@@ -145,3 +145,140 @@ def mini_gauge(score: float, label: str = "Score") -> go.Figure:
         height=180,
     )
     return fig
+
+def cfa_score_report_chart(topic_perf_list: List[Dict]) -> go.Figure:
+    """Official replica of the CFA candidate performance score report."""
+    order = [
+        "Ethical and Professional Standards",
+        "Quantitative Methods",
+        "Economics",
+        "Financial Statement Analysis",
+        "Corporate Finance",
+        "Equities",
+        "Fixed Income",
+        "Derivatives",
+        "Alternative Investments",
+        "Portfolio Management"
+    ]
+    
+    labels_map = {
+        "Ethical and Professional Standards": "Ethical & Professional<br>Standards<br>(15-20%)",
+        "Quantitative Methods": "Quantitative<br>Methods<br>(6-9%)",
+        "Economics": "Economics<br>(6-9%)",
+        "Financial Statement Analysis": "Financial Statement<br>Analysis<br>(11-14%)",
+        "Corporate Finance": "Corporate Finance<br>(6-9%)",
+        "Equities": "Equities<br>(11-14%)",
+        "Fixed Income": "Fixed Income<br>(11-14%)",
+        "Derivatives": "Derivatives<br>(5-8%)",
+        "Alternative Investments": "Alternative<br>Investments<br>(7-10%)",
+        "Portfolio Management": "Portfolio<br>Management<br>(8-12%)"
+    }
+    
+    admin_averages = {
+        "Ethical and Professional Standards": 62,
+        "Quantitative Methods": 58,
+        "Economics": 60,
+        "Financial Statement Analysis": 56,
+        "Corporate Finance": 61,
+        "Equities": 63,
+        "Fixed Income": 59,
+        "Derivatives": 57,
+        "Alternative Investments": 62,
+        "Portfolio Management": 60
+    }
+    
+    perf_map = {p["topic"]: p["avg_score"] for p in topic_perf_list}
+    
+    x_data = []
+    y_user = []
+    y_base = []
+    y_range_len = []
+    y_admin = []
+    
+    for t in order:
+        score = perf_map.get(t, None)
+        if score is None:
+            score = 50.0
+        
+        min_r = max(0, score - 10)
+        max_r = min(100, score + 10)
+        range_len = max_r - min_r
+        
+        x_data.append(labels_map[t])
+        y_user.append(score)
+        y_base.append(min_r)
+        y_range_len.append(range_len)
+        y_admin.append(admin_averages[t])
+        
+    fig = go.Figure()
+    
+    # 1. Likely range box
+    fig.add_trace(go.Bar(
+        x=x_data,
+        y=y_range_len,
+        base=y_base,
+        marker_color="rgba(191, 219, 254, 0.45)",
+        marker_line=dict(color="rgba(147, 197, 253, 0.6)", width=1),
+        width=0.4,
+        name="Likely Score Range",
+        hoverinfo="none"
+    ))
+    
+    # 2. Topic Administration Average
+    fig.add_trace(go.Scatter(
+        x=x_data,
+        y=y_admin,
+        mode="markers",
+        marker=dict(
+            symbol="line-ew",
+            size=22,
+            line=dict(color="#64748b", width=2, dash="dot")
+        ),
+        name="Topic Administration Avg"
+    ))
+    
+    # 3. Your Score
+    fig.add_trace(go.Scatter(
+        x=x_data,
+        y=y_user,
+        mode="markers",
+        marker=dict(
+            symbol="line-ew",
+            size=26,
+            line=dict(color="#f1f5f9", width=4)
+        ),
+        name="Your Score"
+    ))
+    
+    # Passing threshold lines
+    fig.add_hline(y=70, line_dash="solid", line_color="#475569", line_width=1)
+    fig.add_hline(y=50, line_dash="solid", line_color="#475569", line_width=1)
+    
+    fig.update_layout(
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="#94a3b8", size=9),
+        yaxis=dict(
+            range=[30, 100], 
+            gridcolor="#1e293b", 
+            zerolinecolor="#1e293b",
+            tickvals=[50, 70],
+            ticktext=["50%", "70%"],
+            title="Score (%)"
+        ),
+        xaxis=dict(
+            gridcolor="rgba(0,0,0,0)"
+        ),
+        margin=dict(l=40, r=40, t=10, b=30),
+        height=320,
+        showlegend=True,
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1,
+            font=dict(size=9, color="#94a3b8")
+        )
+    )
+    return fig

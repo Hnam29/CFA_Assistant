@@ -25,7 +25,7 @@ except ImportError:
     def discard_session(sid): pass
 from utils.auth import is_logged_in, get_current_user, render_auth_page
 from utils.cfa_topics import TOPIC_NAMES, CFA_TOPICS, TOPIC_WEIGHTS
-from utils.charts import radar_chart, score_timeline, topic_bar_chart
+from utils.charts import radar_chart, score_timeline, topic_bar_chart, cfa_score_report_chart
 from utils.i18n import t
 from datetime import date, datetime, timedelta
 
@@ -342,124 +342,35 @@ with row1_col2:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# Row 2: Timeline and Upcoming Sessions (Height: 280px)
-row2_col1, row2_col2 = st.columns([1.2, 0.8])
+# Row 2: Timeline (Full width)
+with st.container(border=True):
+    st.markdown(f"### {t('score_history')}")
+    if sessions:
+        try:
+            tl_fig = score_timeline(sessions, height=280)
+        except TypeError:
+            tl_fig = score_timeline(sessions)
+        st.plotly_chart(tl_fig, use_container_width=True, key="timeline")
+    else:
+        st.markdown(
+            f"""<div style="display:flex; align-items:center; justify-content:center; height:280px; color:#64748b;">
+                {t('no_sessions_yet')}
+            </div>""", unsafe_allow_html=True)
 
-with row2_col1:
-    with st.container(border=True):
-        st.markdown(f"### {t('score_history')}")
-        if sessions:
-            try:
-                tl_fig = score_timeline(sessions, height=280)
-            except TypeError:
-                tl_fig = score_timeline(sessions)
-            st.plotly_chart(tl_fig, use_container_width=True, key="timeline")
-        else:
-            st.markdown(
-                f"""<div style="display:flex; align-items:center; justify-content:center; height:280px; color:#64748b;">
-                    {t('no_sessions_yet')}
-                </div>""", unsafe_allow_html=True)
+st.markdown("<br>", unsafe_allow_html=True)
 
-with row2_col2:
-    with st.container(border=True):
-        st.markdown(f"### {t('upcoming_sessions')}")
-        if upcoming:
-            today_str    = date.today().isoformat()
-            tomorrow_str = (date.today() + timedelta(days=1)).isoformat()
-
-            # Group by date
-            from collections import defaultdict
-            by_date: dict = defaultdict(list)
-            for sess in upcoming:
-                by_date[sess["scheduled_date"]].append(sess)
-
-            # Build topic score lookup for context bars
-            topic_score_lookup = {p["topic"]: p["avg_score"] for p in topic_perf}
-
-            type_icons = {"Practice": "🎯", "Mock Exam": "📝", "Review": "📖"}
-            priority_dots = {"high": "🔴", "medium": "🟡", "low": "🟢"}
-            priority_colors = {"high": "#ef4444", "medium": "#f59e0b", "low": "#10b981"}
-
-            # Build a single unified HTML block to avoid Streamlit rendering blank spaces
-            upcoming_html = '<div style="max-height:220px; min-height:220px; overflow-y:auto; padding-right:5px; margin-bottom: 0.5rem;">'
-            
-            for day in sorted(by_date.keys()):
-                if day == today_str:
-                    day_label = t("today")
-                    header_color = "#6366f1"
-                elif day == tomorrow_str:
-                    day_label = t("tomorrow")
-                    header_color = "#06b6d4"
-                else:
-                    try:
-                        d = datetime.strptime(day, "%Y-%m-%d")
-                        day_label = d.strftime("%A, %b %d")
-                    except Exception:
-                        day_label = day
-                    header_color = "#475569"
-
-                upcoming_html += f"""
-                <div style="font-size:0.75rem; font-weight:700; color:{header_color};
-                            text-transform:uppercase; letter-spacing:0.08em;
-                            margin: 0.8rem 0 0.3rem; padding-bottom:0.2rem;
-                            border-bottom:1px solid #1e293b;">
-                    {day_label}
-                </div>
-                """
-
-                for s in by_date[day]:
-                    priority     = s.get("priority", "medium")
-                    session_type = s.get("session_type", "Practice")
-                    icon         = type_icons.get(session_type, "📚")
-                    dot          = priority_dots.get(priority, "🟡")
-                    pcolor       = priority_colors.get(priority, "#f59e0b")
-                    topic_name   = s["topic"]
-                    display_topic = topic_name if len(topic_name) <= 28 else topic_name[:25] + "\u2026"
-
-                    # Context bar
-                    tscore = topic_score_lookup.get(topic_name, None)
-                    bar_section = ""
-                    if tscore is not None:
-                        bcolor = "#10b981" if tscore >= 70 else "#f59e0b" if tscore >= 50 else "#ef4444"
-                        pct = int(min(tscore, 100))
-                        sc  = int(tscore)
-                        bar_section = f"""
-                        <div style="display:flex;align-items:center;gap:0.4rem;margin-top:0.25rem;">
-                            <div style="flex:1;height:3px;background:#0f172a;border-radius:2px;overflow:hidden;">
-                                <div style="width:{pct}%;height:100%;background:{bcolor};border-radius:2px;"></div>
-                            </div>
-                            <span style="font-size:0.65rem;color:{bcolor};font-weight:700;min-width:2rem;">{sc}%</span>
-                        </div>
-                        """
-
-                    upcoming_html += f"""
-                    <div style="background:#1e293b;border:1px solid #334155;border-left:3px solid {pcolor};
-                                border-radius:6px;padding:0.5rem 0.75rem;margin-bottom:0.3rem;">
-                        <div style="display:flex;align-items:center;justify-content:space-between;gap:0.5rem;">
-                            <div style="flex:1;min-width:0;">
-                                <span style="font-size:0.82rem;font-weight:600;color:#f1f5f9;white-space:nowrap;
-                                            overflow:hidden;text-overflow:ellipsis;display:block;">
-                                    {icon} {display_topic}
-                                </span>
-                                <span style="font-size:0.7rem;color:#64748b;">{session_type}</span>
-                            </div>
-                            <span style="font-size:0.8rem;">{dot}</span>
-                        </div>
-                        {bar_section}
-                    </div>
-                    """
-            upcoming_html += '</div>'
-            st.markdown(upcoming_html, unsafe_allow_html=True)
-
-            if st.button(t("view_all_sessions"), key="go_schedule_view", use_container_width=True):
-                st.switch_page("pages/5_Schedule.py")
-        else:
-            st.markdown(
-                f"""<div style="text-align:center; color:#64748b; padding:1.5rem;">
-                    {t('no_sessions_scheduled')}
-                </div>""", unsafe_allow_html=True)
-            if st.button(t("generate_study_plan"), key="go_schedule"):
-                st.switch_page("pages/5_Schedule.py")
+# Row 3: Official CFA Candidate Performance Score Report replica
+with st.container(border=True):
+    st.markdown("### 📊 CFA Topic Performance Detail")
+    st.markdown(
+        "<p style='color:#64748b; font-size:0.85rem; margin-top:-0.4rem; margin-bottom:1.2rem;'>"
+        "See how you performed (percentage of questions answered correctly) in each topic area. "
+        "The light blue boxes represent your likely score ranges based on studied accuracy. "
+        "Dotted lines show the Topic Administration Average benchmarks."
+        "</p>",
+        unsafe_allow_html=True
+    )
+    st.plotly_chart(cfa_score_report_chart(topic_perf), use_container_width=True, key="cfa_score_report")
 
 
 # ── Feature 4: Topics Needing Attention — deep-dive ───────────────
