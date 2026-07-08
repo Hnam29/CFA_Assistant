@@ -250,6 +250,16 @@ def cfa_score_report_chart(topic_perf_list: List[Dict]) -> go.Figure:
         name="Your Score"
     ))
     
+    # Dynamic range calculation to remove blank space
+    max_score = max(y_user + y_admin)
+    min_score = min([b for b in y_base] + y_admin)
+    
+    max_y = max(80, int(max_score + 10))
+    min_y = min(45, int(min_score - 10))
+    
+    min_y = max(0, min_y)
+    max_y = min(100, max_y)
+
     # Passing threshold lines
     fig.add_hline(y=70, line_dash="solid", line_color="#475569", line_width=1)
     fig.add_hline(y=50, line_dash="solid", line_color="#475569", line_width=1)
@@ -257,22 +267,23 @@ def cfa_score_report_chart(topic_perf_list: List[Dict]) -> go.Figure:
     fig.update_layout(
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(color="#94a3b8", size=8),
+        font=dict(color="#94a3b8", size=10),
         yaxis=dict(
-            range=[30, 100], 
+            range=[min_y, max_y], 
             gridcolor="#1e293b", 
             zerolinecolor="#1e293b",
             tickvals=[50, 70],
             ticktext=["50%", "70%"],
-            title="Score (%)"
+            title="Score (%)",
+            tickfont=dict(size=11, color="#94a3b8")
         ),
         xaxis=dict(
             gridcolor="rgba(0,0,0,0)",
             tickangle=0,
-            tickfont=dict(size=7.5)
+            tickfont=dict(size=9.5, color="#e2e8f0")
         ),
-        margin=dict(l=40, r=40, t=10, b=50),
-        height=370,
+        margin=dict(l=40, r=40, t=10, b=60),
+        height=400,
         showlegend=True,
         legend=dict(
             orientation="h",
@@ -280,7 +291,7 @@ def cfa_score_report_chart(topic_perf_list: List[Dict]) -> go.Figure:
             y=1.02,
             xanchor="right",
             x=1,
-            font=dict(size=9, color="#94a3b8")
+            font=dict(size=10.5, color="#94a3b8")
         )
     )
     return fig
