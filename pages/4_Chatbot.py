@@ -59,6 +59,9 @@ if "chat_messages" not in st.session_state:
     history = get_chat_history(uid, limit=40)
     st.session_state.chat_messages = history
 
+user_msg_count = sum(1 for m in st.session_state.chat_messages if m["role"] == "user")
+is_locked = user_msg_count >= 5
+
 # Inject context if coming from practice page
 context = st.session_state.pop("chatbot_context", "")
 
@@ -69,7 +72,7 @@ with st.sidebar:
     quick_topic = st.selectbox("Quick Topic Focus", ["All Topics"] + TOPIC_NAMES, key="chat_topic")
 
     st.markdown("---")
-    st.markdown("**💬 Conversation Starters**")
+    st.markdown(f"**💬 Conversation Starters** ({user_msg_count}/5 questions used)")
 
     starters = [
         "Explain the differences between FIFO and LIFO inventory methods",
@@ -78,7 +81,7 @@ with st.sidebar:
     ]
 
     for starter in starters:
-        if st.button(f"💬 {starter[:45]}...", key=f"starter_{hash(starter)}", use_container_width=True):
+        if st.button(f"💬 {starter[:45]}...", key=f"starter_{hash(starter)}", use_container_width=True, disabled=is_locked):
             st.session_state["pending_message"] = starter
 
     st.markdown("---")
@@ -178,10 +181,19 @@ if _perf:
 
 user_ctx = "\n".join(_user_ctx_lines) if _user_ctx_lines else ""
 
-user_input = st.chat_input("Ask your CFA tutor anything... e.g. 'What is convexity and why does it matter?'")
+if is_locked:
+    st.markdown(
+        """<div style="background:rgba(239,68,68,0.1); border:1px solid #ef4444; border-radius:10px; padding:1rem; margin-top:1rem; margin-bottom:1rem; text-align:center; color:#fca5a5; font-size:0.9rem;">
+            🔒 Bạn đã sử dụng hết lượt hỏi miễn phí của phiên này (5 câu hỏi). Hãy liên hệ Admin để nâng cấp gói học tập hoặc xoá đoạn chat để bắt đầu lại!
+        </div>""",
+        unsafe_allow_html=True
+    )
+    user_input = st.chat_input("Chatbot đã khóa do hết lượt hỏi...", disabled=True)
+else:
+    user_input = st.chat_input("Ask your CFA tutor anything... e.g. 'What is convexity and why does it matter?'")
 
 # Handle send
-if user_input or pending:
+if (user_input or pending) and not is_locked:
     msg = (user_input or pending).strip()
 
     # Add user message
