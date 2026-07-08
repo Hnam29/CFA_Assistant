@@ -10,7 +10,7 @@ from typing import List, Dict
 from utils.cfa_topics import TOPIC_NAMES, TOPIC_COLORS
 
 
-def radar_chart(topic_scores: Dict[str, float]) -> go.Figure:
+def radar_chart(topic_scores: Dict[str, float], height: int = 360) -> go.Figure:
     """Radar / spider chart for performance across CFA topics."""
     topics = list(topic_scores.keys())
     scores = list(topic_scores.values())
@@ -48,23 +48,23 @@ def radar_chart(topic_scores: Dict[str, float]) -> go.Figure:
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         margin=dict(l=60, r=60, t=40, b=40),
-        height=400,
+        height=height,
     )
     return fig
 
 
-def score_timeline(sessions: List[Dict]) -> go.Figure:
+def score_timeline(sessions: List[Dict], height: int = 280) -> go.Figure:
     """Line chart of score over time."""
     if not sessions:
         fig = go.Figure()
-        fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", height=200)
+        fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", height=height)
         return fig
 
     df = pd.DataFrame(sessions)
     df = df[df["completed"] == 1].copy()
     if df.empty:
         fig = go.Figure()
-        fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", height=200)
+        fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", height=height)
         return fig
 
     df["started_at"] = pd.to_datetime(df["started_at"])
@@ -84,12 +84,12 @@ def score_timeline(sessions: List[Dict]) -> go.Figure:
         yaxis=dict(gridcolor="#334155", zerolinecolor="#334155", range=[0, 100]),
         legend=dict(bgcolor="rgba(0,0,0,0)", font=dict(color="#94a3b8")),
         margin=dict(l=20, r=20, t=20, b=20),
-        height=280,
+        height=height,
     )
     return fig
 
 
-def topic_bar_chart(topic_scores: Dict[str, float]) -> go.Figure:
+def topic_bar_chart(topic_scores: Dict[str, float], height: int = 380) -> go.Figure:
     """Horizontal bar chart colored by score band."""
     topics = list(topic_scores.keys())
     scores = list(topic_scores.values())
@@ -110,7 +110,7 @@ def topic_bar_chart(topic_scores: Dict[str, float]) -> go.Figure:
         xaxis=dict(range=[0, 110], gridcolor="#334155", zerolinecolor="#334155"),
         yaxis=dict(gridcolor="#334155"),
         margin=dict(l=10, r=40, t=10, b=10),
-        height=380,
+        height=height,
     )
     return fig
 

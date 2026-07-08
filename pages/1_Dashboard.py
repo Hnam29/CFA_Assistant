@@ -312,39 +312,43 @@ with col4:
 st.markdown("<br>", unsafe_allow_html=True)
 
 # ── Main content ──────────────────────────────────────────────────
-col_left, col_right = st.columns([1.2, 1])
+# Row 1: Radar and Topic Bars (Height: 360px)
+row1_col1, row1_col2 = st.columns([1, 1])
 
-with col_left:
+with row1_col1:
     with st.container(border=True):
         st.markdown(f"### {t('performance_radar')}")
-        st.plotly_chart(radar_chart(topic_scores), use_container_width=True, key="radar")
+        st.plotly_chart(radar_chart(topic_scores, height=360), use_container_width=True, key="radar")
 
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    with st.container(border=True):
-        st.markdown(f"### {t('score_history')}")
-        if sessions:
-            st.plotly_chart(score_timeline(sessions), use_container_width=True, key="timeline")
-        else:
-            st.markdown(
-                f"""<div style="text-align:center; color:#64748b; padding:2rem;">
-                    {t('no_sessions_yet')}
-                </div>""", unsafe_allow_html=True)
-
-with col_right:
+with row1_col2:
     with st.container(border=True):
         st.markdown(f"### {t('score_by_topic')}")
         if topic_perf:
             perf_dict = {p["topic"]: p["avg_score"] for p in topic_perf}
-            st.plotly_chart(topic_bar_chart(perf_dict), use_container_width=True, key="topicbar")
+            st.plotly_chart(topic_bar_chart(perf_dict, height=360), use_container_width=True, key="topicbar")
         else:
             st.markdown(
-                f"""<div style="text-align:center; color:#64748b; padding:2rem;">
+                f"""<div style="display:flex; align-items:center; justify-content:center; height:360px; color:#64748b;">
                     {t('complete_to_see_scores')}
                 </div>""", unsafe_allow_html=True)
 
-    st.markdown("<br>", unsafe_allow_html=True)
+st.markdown("<br>", unsafe_allow_html=True)
 
+# Row 2: Timeline and Upcoming Sessions (Height: 280px)
+row2_col1, row2_col2 = st.columns([1, 1])
+
+with row2_col1:
+    with st.container(border=True):
+        st.markdown(f"### {t('score_history')}")
+        if sessions:
+            st.plotly_chart(score_timeline(sessions, height=280), use_container_width=True, key="timeline")
+        else:
+            st.markdown(
+                f"""<div style="display:flex; align-items:center; justify-content:center; height:280px; color:#64748b;">
+                    {t('no_sessions_yet')}
+                </div>""", unsafe_allow_html=True)
+
+with row2_col2:
     with st.container(border=True):
         st.markdown(f"### {t('upcoming_sessions')}")
         if upcoming:
@@ -364,10 +368,10 @@ with col_right:
             priority_dots = {"high": "🔴", "medium": "🟡", "low": "🟢"}
             priority_colors = {"high": "#ef4444", "medium": "#f59e0b", "low": "#10b981"}
 
+            # Scrollable container matching history chart height (280px minus headers)
+            st.markdown('<div style="max-height:220px; min-height:220px; overflow-y:auto; padding-right:5px; margin-bottom: 0.5rem;">', unsafe_allow_html=True)
             shown = 0
             for day in sorted(by_date.keys()):
-                if shown >= 5:
-                    break
                 if day == today_str:
                     day_label = t("today")
                     header_color = "#6366f1"
@@ -393,8 +397,6 @@ with col_right:
                 )
 
                 for s in by_date[day]:
-                    if shown >= 5:
-                        break
                     priority     = s.get("priority", "medium")
                     session_type = s.get("session_type", "Practice")
                     icon         = type_icons.get(session_type, "📚")
@@ -436,18 +438,8 @@ with col_right:
                     )
                     st.markdown(card_html, unsafe_allow_html=True)
                     shown += 1
+            st.markdown('</div>', unsafe_allow_html=True)
 
-            # "View all" link if more than 5
-            if len(upcoming) > 5:
-                remaining = len(upcoming) - 5
-                st.markdown(
-                    f"""<div style="text-align:right; margin-top:0.2rem;">
-                        <span style="font-size:0.75rem; color:#6366f1; cursor:pointer;">
-                            +{remaining} more
-                        </span>
-                    </div>""",
-                    unsafe_allow_html=True,
-                )
             if st.button(t("view_all_sessions"), key="go_schedule_view", use_container_width=True):
                 st.switch_page("pages/5_Schedule.py")
         else:
