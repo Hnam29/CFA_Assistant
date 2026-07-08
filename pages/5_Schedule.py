@@ -48,21 +48,21 @@ def draw_html_calendar(pending_sessions):
     month_name = today.strftime("%B %Y")
     
     html = f"""
-    <div style="background:#0f172a; border:1px solid #1e293b; border-radius:14px; padding:1.25rem; margin-bottom:1.5rem;">
-        <h4 style="color:#f1f5f9; margin:0 0 1rem 0; font-size:1.05rem; display:flex; align-items:center; gap:0.5rem;">
+    <div style="background:#0f172a; border:1px solid #1e293b; border-radius:14px; padding:1rem; margin:0 auto 1.5rem auto; max-width:640px; box-shadow:0 4px 20px rgba(0,0,0,0.15);">
+        <h4 style="color:#f1f5f9; margin:0 0 0.75rem 0; font-size:0.95rem; display:flex; align-items:center; gap:0.4rem; font-weight:700;">
             📅 Scheduled Sessions Calendar ({month_name})
         </h4>
-        <div style="display:grid; grid-template-columns: repeat(7, 1fr); gap:6px; text-align:center; font-size:0.8rem; font-weight:600; color:#64748b; margin-bottom:6px;">
+        <div style="display:grid; grid-template-columns: repeat(7, 1fr); gap:4px; text-align:center; font-size:0.75rem; font-weight:600; color:#64748b; margin-bottom:4px;">
             <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
         </div>
-        <div style="display:grid; gap:6px;">
+        <div style="display:grid; gap:4px;">
     """
     
     for week in month_days:
-        html += '<div style="display:grid; grid-template-columns: repeat(7, 1fr); gap:6px;">'
+        html += '<div style="display:grid; grid-template-columns: repeat(7, 1fr); gap:4px;">'
         for day in week:
             if day == 0:
-                html += '<div style="background:transparent; min-height:55px;"></div>'
+                html += '<div style="background:transparent; min-height:42px;"></div>'
             else:
                 curr_date_str = f"{yr}-{mo:02d}-{day:02d}"
                 day_sessions = sessions_by_date.get(curr_date_str, [])
@@ -81,12 +81,12 @@ def draw_html_calendar(pending_sessions):
                         color = "#a855f7"
                     elif stype == "Review":
                         color = "#10b981"
-                    dots_html += f'<div style="background:{color}; width:6px; height:6px; border-radius:50%; display:inline-block; margin:1px;" title="{stype}: {s.get("topic")}"></div>'
+                    dots_html += f'<div style="background:{color}; width:5px; height:5px; border-radius:50%; display:inline-block; margin:1px;" title="{stype}: {s.get("topic")}"></div>'
                 
                 html += f"""
-                <div style="background:{bg}; border:{border}; border-radius:8px; min-height:55px; padding:4px; display:flex; flex-direction:column; justify-content:space-between; align-items:center; position:relative;">
-                    <span style="font-weight:700; color:{'#6366f1' if is_today else '#f1f5f9'}; font-size:0.8rem;">{day}</span>
-                    <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:2px; max-width:100%; overflow:hidden; padding-bottom:2px;">
+                <div style="background:{bg}; border:{border}; border-radius:6px; min-height:42px; padding:2px; display:flex; flex-direction:column; justify-content:space-between; align-items:center; position:relative;">
+                    <span style="font-weight:700; color:{'#6366f1' if is_today else '#f1f5f9'}; font-size:0.75rem;">{day}</span>
+                    <div style="display:flex; flex-wrap:wrap; justify-content:center; gap:1px; max-width:100%; overflow:hidden; padding-bottom:1px;">
                         {dots_html}
                     </div>
                 </div>
@@ -95,14 +95,16 @@ def draw_html_calendar(pending_sessions):
         
     html += """
         </div>
-        <div style="display:flex; gap:1.2rem; font-size:0.75rem; color:#94a3b8; margin-top:0.8rem; justify-content:center; border-top:1px solid #1e293b; padding-top:0.8rem;">
-            <div style="display:flex; align-items:center; gap:4px;"><div style="background:#6366f1; width:7px; height:7px; border-radius:50%;"></div> Practice</div>
-            <div style="display:flex; align-items:center; gap:4px;"><div style="background:#a855f7; width:7px; height:7px; border-radius:50%;"></div> Mock Exam</div>
-            <div style="display:flex; align-items:center; gap:4px;"><div style="background:#10b981; width:7px; height:7px; border-radius:50%;"></div> Review</div>
+        <div style="display:flex; gap:1rem; font-size:0.7rem; color:#94a3b8; margin-top:0.6rem; justify-content:center; border-top:1px solid #1e293b; padding-top:0.6rem;">
+            <div style="display:flex; align-items:center; gap:4px;"><div style="background:#6366f1; width:6px; height:6px; border-radius:50%;"></div> Practice</div>
+            <div style="display:flex; align-items:center; gap:4px;"><div style="background:#a855f7; width:6px; height:6px; border-radius:50%;"></div> Mock Exam</div>
+            <div style="display:flex; align-items:center; gap:4px;"><div style="background:#10b981; width:6px; height:6px; border-radius:50%;"></div> Review</div>
         </div>
     </div>
     """
-    return html
+    # Sanitize newlines and redundant spaces to prevent Streamlit from wrapping in code blocks
+    cleaned_html = " ".join([line.strip() for line in html.splitlines()])
+    return cleaned_html
 
 # Kanban CSS
 st.markdown("""
