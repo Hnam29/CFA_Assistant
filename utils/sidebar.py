@@ -68,12 +68,12 @@ def render_sidebar():
         _sb_c1, _sb_c2, _sb_gap = st.columns([1, 1, 0.1])
         with _sb_c1:
             _t_en = "primary" if _lang == "en" else "secondary"
-            if st.button("EN", key="sb_lang_en", use_container_width=True, type=_t_en):
+            if st.button("🇬🇧", key="sb_lang_en", use_container_width=True, type=_t_en):
                 set_lang("en")
                 st.rerun()
         with _sb_c2:
             _t_vi = "primary" if _lang == "vi" else "secondary"
-            if st.button("VI", key="sb_lang_vi", use_container_width=True, type=_t_vi):
+            if st.button("🇻🇳", key="sb_lang_vi", use_container_width=True, type=_t_vi):
                 set_lang("vi")
                 st.rerun()
         st.markdown("<div style='margin-bottom:0.4rem;'></div>", unsafe_allow_html=True)

@@ -108,12 +108,12 @@ with nav_col_right:
     rc1, rc2, rc_gap, rc3, rc4 = st.columns([0.6, 0.6, 0.15, 1.0, 1.2])
     with rc1:
         _t_en = "primary" if _lang == "en" else "secondary"
-        if st.button("EN", key="lang_en", use_container_width=True, type=_t_en, help="English"):
+        if st.button("🇬🇧", key="lang_en", use_container_width=True, type=_t_en, help="English"):
             set_lang("en")
             st.rerun()
     with rc2:
         _t_vi = "primary" if _lang == "vi" else "secondary"
-        if st.button("VI", key="lang_vi", use_container_width=True, type=_t_vi, help="Tiếng Việt"):
+        if st.button("🇻🇳", key="lang_vi", use_container_width=True, type=_t_vi, help="Tiếng Việt"):
             set_lang("vi")
             st.rerun()
     with rc3:
