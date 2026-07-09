@@ -424,7 +424,8 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "sch_insights": "🧠 Đánh giá học tập từ AI",
         "sch_overdue": "⚠️ Bạn có {count} buổi học quá hạn! Hãy cố gắng hoàn thành.",
         "sch_legend": "Chú giải: 🟢 Luyện tập | 🔵 Thi thử | 🟠 Ôn tập",
-    },
+    }
+}
 
 
 def get_lang() -> str:
