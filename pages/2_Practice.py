@@ -136,7 +136,7 @@ if not st.session_state.practice_questions:
             st.rerun()
     with tab_col2:
         if st.button(
-            "📁 Manage Question Bank",
+            "📁 Question Bank",
             use_container_width=True,
             type="primary" if st.session_state.prac_active_tab == "manage" else "secondary",
             key="nav_tab_manage",
@@ -269,7 +269,7 @@ if not st.session_state.practice_questions:
         topic_count = _bank_stats.get(topic, 0)
         if use_bank_only and topic_count == 0:
             st.warning(f"⚠️ Your local question bank is empty for **{topic}**.")
-            st.info("Switch to the **📁 Manage Question Bank** tab above to upload questions first.")
+            st.info("Switch to the **📁 Question Bank** tab above to upload questions first.")
         else:
             if st.button("🚀 Generate Questions", use_container_width=True, type="primary", key="gen_btn"):
                 spinner_msg = (

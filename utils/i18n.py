@@ -216,7 +216,7 @@ def t(key: str, **kwargs) -> str:
 
 def render_lang_switcher() -> None:
     """
-    Render a compact EN 🇬🇧 / VI 🇻🇳 language toggle using Streamlit columns.
+    Render a compact EN / VI language toggle using Streamlit columns.
     Active language button is styled as primary, inactive as secondary.
     Must be called inside a column or container.
     """
@@ -224,11 +224,11 @@ def render_lang_switcher() -> None:
     col_en, col_vi = st.columns(2)
     with col_en:
         btn_type_en = "primary" if lang == "en" else "secondary"
-        if st.button("🇬🇧 EN", key="lang_en", use_container_width=True, type=btn_type_en):
+        if st.button("EN", key="lang_en", use_container_width=True, type=btn_type_en):
             set_lang("en")
             st.rerun()
     with col_vi:
         btn_type_vi = "primary" if lang == "vi" else "secondary"
-        if st.button("🇻🇳 VI", key="lang_vi", use_container_width=True, type=btn_type_vi):
+        if st.button("VI", key="lang_vi", use_container_width=True, type=btn_type_vi):
             set_lang("vi")
             st.rerun()
