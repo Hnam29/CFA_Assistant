@@ -54,6 +54,9 @@ if not is_premium_user(uid):
     )
     st.stop()
 
+profile = get_user_profile(uid)
+display_name = profile.get("full_name") or user["username"]
+
 # ── State init ────────────────────────────────────────────────────
 if "chat_messages" not in st.session_state:
     # Load from DB
@@ -95,7 +98,7 @@ with st.sidebar:
 st.markdown(
     f"""
     <div style="margin-bottom:1.5rem;">
-        <h1 style="font-size:1.9rem; font-weight:800; color:#f1f5f9; margin:0;">{t("chat_title")}</h1>
+        <h1 style="font-size:1.9rem; font-weight:800; color:#f1f5f9; margin:0;">{t("chat_title", user_name=display_name)}</h1>
         <p style="color:#64748b; margin-top:0.3rem;">
             {t("chat_subtitle")}
         </p>

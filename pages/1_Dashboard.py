@@ -155,10 +155,11 @@ if _unread:
     msgs_preview = " &nbsp;|&nbsp; ".join(
         f'<em>{n["message"][:60]}{"..." if len(n["message"]) > 60 else ""}</em>' for n in _unread[:2]
     )
+    admin_msg_title = t("dash_admin_messages", count=len(_unread))
     notif_html = (
         f'<div style="background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.3);'
         f'border-radius:8px;padding:0.5rem 1rem;margin-top:0.7rem;font-size:0.8rem;color:#818cf8;">'
-        f'📩 <strong>{len(_unread)} new message{"s" if len(_unread) > 1 else ""} from admin:</strong> {msgs_preview}'
+        f'<strong>{admin_msg_title}</strong> {msgs_preview}'
         f'</div>'
     )
 
@@ -170,13 +171,13 @@ st.markdown(
             <div style="text-align:center;min-width:80px;">
                 <div style="font-size:2.4rem;line-height:1;">{flame}</div>
                 <div style="font-size:1.9rem;font-weight:900;color:#f59e0b;line-height:1.1;">{cur_streak}</div>
-                <div style="font-size:0.7rem;color:#64748b;margin-top:1px;">Day Streak</div>
+                <div style="font-size:0.7rem;color:#64748b;margin-top:1px;">{t('dash_day_streak')}</div>
             </div>
             <div style="width:1px;height:60px;background:#334155;"></div>
             <div style="text-align:center;min-width:80px;">
                 <div style="font-size:1.6rem;font-weight:900;color:#94a3b8;">{longest_str}</div>
-                <div style="font-size:0.7rem;color:#64748b;">Best Streak</div>
-                <div style="font-size:0.65rem;color:#475569;margin-top:2px;">Last active: {last_active}</div>
+                <div style="font-size:0.7rem;color:#64748b;">{t('dash_best_streak')}</div>
+                <div style="font-size:0.65rem;color:#475569;margin-top:2px;">{t('dash_last_active', date=last_active)}</div>
             </div>
             <div style="width:1px;height:60px;background:#334155;"></div>
             <div style="text-align:center;min-width:100px;">
@@ -184,14 +185,14 @@ st.markdown(
                 <div style="background:{lvl_bg};color:{lvl_color};border:1px solid {lvl_color}44;
                             border-radius:20px;padding:1px 10px;font-size:0.72rem;font-weight:700;
                             display:inline-block;margin-top:2px;">{eng_level}</div>
-                <div style="font-size:0.65rem;color:#475569;margin-top:3px;">Engagement Score</div>
+                <div style="font-size:0.65rem;color:#475569;margin-top:3px;">{t('dash_engagement_score')}</div>
             </div>
             <div style="width:1px;height:60px;background:#334155;"></div>
             <div style="flex:1;min-width:160px;">
-                <div style="font-size:0.7rem;color:#64748b;margin-bottom:4px;">Last 14 days activity</div>
+                <div style="font-size:0.7rem;color:#64748b;margin-bottom:4px;">{t('dash_last_14_days')}</div>
                 <div>{dots_html}</div>
                 <div style="font-size:0.7rem;color:#64748b;margin-top:6px;">
-                    📊 {eng_s30} sessions this month &nbsp;·&nbsp; ∅ {eng_avg:.0f}% avg score
+                    📊 {t('dash_sessions_this_month', count=eng_s30)} &nbsp;·&nbsp; ∅ {t('dash_avg_score', score=round(eng_avg))}
                 </div>
             </div>
         </div>
@@ -210,10 +211,10 @@ except Exception:
 
 if pending_sessions:
     st.markdown(
-        """<div class="cfa-card" style="border-color:#3b82f6; background:rgba(59,130,246,0.05); margin-bottom:1.5rem; padding: 1.2rem;">
-            <h4 style="color:#60a5fa; margin:0 0 0.5rem 0;">🔄 Saved Sessions In Progress</h4>
+        f"""<div class="cfa-card" style="border-color:#3b82f6; background:rgba(59,130,246,0.05); margin-bottom:1.5rem; padding: 1.2rem;">
+            <h4 style="color:#60a5fa; margin:0 0 0.5rem 0;">{t('dash_saved_sessions')}</h4>
             <p style="color:#94a3b8; font-size:0.85rem; margin:0 0 1rem 0;">
-                You have saved/paused sessions. You can resume them or discard them.
+                {t('dash_saved_subtext')}
             </p>
         </div>""",
         unsafe_allow_html=True
@@ -224,21 +225,21 @@ if pending_sessions:
         ps_type = ps["session_type"]
         started_time = format_datetime_str(ps["started_at"])
 
-        display_type = "Practice" if ps_type.lower() in ("practice", "mixed") else "Mock Exam"
+        display_type = t("dash_practice") if ps_type.lower() in ("practice", "mixed") else t("dash_mock_exam")
 
         col_ps_info, col_ps_actions = st.columns([7.5, 2.5])
         with col_ps_info:
             st.markdown(
                 f"""<div style="font-size:0.95rem; color:#f1f5f9; padding-top: 0.3rem;">
-                    <strong>{display_type}</strong> — Topic: <span style="color:#60a5fa; font-weight: 600;">{ps_topic}</span>
-                    <span style="font-size:0.8rem; color:#64748b;">(Started: {started_time})</span>
+                    <strong>{display_type}</strong> — {t('dash_topic')} <span style="color:#60a5fa; font-weight: 600;">{ps_topic}</span>
+                    <span style="font-size:0.8rem; color:#64748b;">{t('dash_started', time=started_time)}</span>
                 </div>""",
                 unsafe_allow_html=True
             )
         with col_ps_actions:
             act_col1, act_col2 = st.columns(2)
             with act_col1:
-                if st.button("▶️ Resume", key=f"resume_{ps_id}", use_container_width=True, type="primary"):
+                if st.button(t("prac_resume"), key=f"resume_{ps_id}", use_container_width=True, type="primary"):
                     state = ps["state"]
                     if ps_type.lower() in ("practice", "mixed"):
                         st.session_state.practice_questions = state["questions"]
@@ -265,12 +266,12 @@ if pending_sessions:
                         st.session_state.exam_confirm_submit = False
                         st.switch_page("pages/3_Mock_Exam.py")
             with act_col2:
-                if st.button("🗑️ Discard", key=f"discard_{ps_id}", use_container_width=True):
+                if st.button(t("prac_discard"), key=f"discard_{ps_id}", use_container_width=True):
                     try:
                         discard_session(ps_id)
                     except Exception:
                         pass
-                    st.toast("Session discarded.")
+                    st.toast(t("session_discarded") if t("session_discarded") != "session_discarded" else "Session discarded.")
                     st.rerun()
     st.markdown("<hr style='border-color:#334155; margin: 1.5rem 0;'>", unsafe_allow_html=True)
 
@@ -361,13 +362,11 @@ st.markdown("<br>", unsafe_allow_html=True)
 
 # Row 3: Official CFA Candidate Performance Score Report replica
 with st.container(border=True):
-    st.markdown("### 📊 CFA Topic Performance Detail")
+    st.markdown(f"### {t('dash_topic_perf_detail')}")
     st.markdown(
-        "<p style='color:#64748b; font-size:0.85rem; margin-top:-0.4rem; margin-bottom:1.2rem;'>"
-        "See how you performed (percentage of questions answered correctly) in each topic area. "
-        "The light blue boxes represent your likely score ranges based on studied accuracy. "
-        "Dotted lines show the Topic Administration Average benchmarks."
-        "</p>",
+        f"<p style='color:#64748b; font-size:0.85rem; margin-top:-0.4rem; margin-bottom:1.2rem;'>"
+        f"{t('dash_topic_perf_desc')}"
+        f"</p>",
         unsafe_allow_html=True
     )
     st.plotly_chart(cfa_score_report_chart(topic_perf), use_container_width=True, key="cfa_score_report")

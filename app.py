@@ -331,17 +331,17 @@ st.markdown(f"<h3 style='text-align:center; color:#f1f5f9; margin-bottom:3rem;'>
 col_r1_text, col_r1_vis = st.columns([1.2, 1])
 with col_r1_text:
     st.markdown(
-        """
+        f"""
         <div style="padding:1rem 0;">
             <span class="badge badge-medium" style="margin-bottom:0.8rem;">Adaptive Q-Bank</span>
-            <h3 style="color:#f1f5f9; font-weight:700;">Dynamic Performance Mapping</h3>
+            <h3 style="color:#f1f5f9; font-weight:700;">{t('land_deep_dive_title1')}</h3>
             <p style="color:#94a3b8; font-size:0.95rem; line-height:1.6; margin-top:1rem;">
-                Our practice engine records your response time and accuracy for every option. When generating questions, it maps topic weight targets to your real performance metrics, ensuring study hours are spent fixing your weaknesses instead of repeating what you already know.
+                {t('land_deep_dive_desc1')}
             </p>
             <ul style="color:#64748b; font-size:0.85rem; padding-left:1.2rem; line-height:1.8; margin-top:1rem;">
-                <li>Comprehensive support for official CFA 2027 curriculum standards</li>
-                <li>Dynamic subtopic indexing (Ethics, Quant Methods, FSA, Fixed Income...)</li>
-                <li>Detailed answer explanations and option analysis</li>
+                <li>{t('land_deep_dive_li1_1')}</li>
+                <li>{t('land_deep_dive_li1_2')}</li>
+                <li>{t('land_deep_dive_li1_3')}</li>
             </ul>
         </div>
         """,
@@ -349,23 +349,23 @@ with col_r1_text:
     )
 with col_r1_vis:
     st.markdown(
-        """
+        f"""
         <div class="cfa-card" style="background:#1e293b; padding:1.5rem; border-color:#334155; margin-top:1.5rem;">
-            <div style="font-size:0.8rem; text-transform:uppercase; color:#64748b; letter-spacing:0.05em; margin-bottom:0.8rem;">Performance Map</div>
+            <div style="font-size:0.8rem; text-transform:uppercase; color:#64748b; letter-spacing:0.05em; margin-bottom:0.8rem;">{t('land_map_perf_title')}</div>
             <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #334155; padding:0.5rem 0;">
-                <span style="color:#f1f5f9; font-size:0.88rem;">📊 Financial Statement Analysis</span>
+                <span style="color:#f1f5f9; font-size:0.88rem;">📊 {t('land_map_fsa')}</span>
                 <span class="badge badge-high">35% Avg</span>
             </div>
             <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #334155; padding:0.5rem 0;">
-                <span style="color:#f1f5f9; font-size:0.88rem;">⚖️ Ethical &amp; Professional Standards</span>
+                <span style="color:#f1f5f9; font-size:0.88rem;">⚖️ {t('land_map_ethics')}</span>
                 <span class="badge badge-medium" style="background:rgba(245,158,11,0.1); color:#fbbf24; border-color:#f59e0b;">58% Avg</span>
             </div>
             <div style="display:flex; justify-content:space-between; align-items:center; padding:0.5rem 0; margin-bottom:1rem;">
-                <span style="color:#f1f5f9; font-size:0.88rem;">📈 Quantitative Methods</span>
+                <span style="color:#f1f5f9; font-size:0.88rem;">📈 {t('land_map_quant')}</span>
                 <span class="badge badge-low">82% Avg</span>
             </div>
             <div style="background:#0f172a; border-radius:8px; padding:0.8rem; text-align:center; font-size:0.75rem; color:#818cf8;">
-                🎯 Next Practice Recommendation: <strong>Inventory valuation &amp; LIFO reserve</strong>
+                🎯 {t('land_map_next_rec')} <strong>{t('land_map_next_rec_topic')}</strong>
             </div>
         </div>
         """,
@@ -378,20 +378,16 @@ st.markdown("<br><br>", unsafe_allow_html=True)
 col_r2_vis, col_r2_text = st.columns([1, 1.2])
 with col_r2_vis:
     st.markdown(
-        """
+        f"""
         <div class="cfa-card" style="background:#1e293b; padding:1.5rem; border-color:#334155; margin-top:1.5rem;">
             <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:1rem;">
                 <span style="font-size:1rem;">👤</span>
-                <div style="font-size:0.75rem; color:#94a3b8;"><strong style="color:#818cf8;">Candidate:</strong> "Explain convexity in simple terms"</div>
+                <div style="font-size:0.75rem; color:#94a3b8;"><strong style="color:#818cf8;">{t('land_chat_candidate')}</strong> "{t('land_chat_query')}"</div>
             </div>
             <div style="background:#0f172a; border-radius:8px; padding:1rem; border:1px solid #334155; margin-bottom:0.5rem;">
-                <div style="font-size:0.8rem; font-weight:700; color:#06b6d4; margin-bottom:0.3rem;">🤖 CFA AI Tutor</div>
+                <div style="font-size:0.8rem; font-weight:700; color:#06b6d4; margin-bottom:0.3rem;">🤖 {t('land_chat_tutor_title')}</div>
                 <div style="font-size:0.78rem; color:#f1f5f9; line-height:1.5;">
-                    Convexity is a measure of the curvature in the relationship between bond prices and yields. While duration assumes a straight line, convexity adjusts for the curve:
-                    <br><br>
-                    <strong>Price Change ≈ -Duration(Δy) + 0.5(Convexity)(Δy)²</strong>
-                    <br><br>
-                    For all normal bonds, convexity is positive, meaning price rises faster as yield drops than it falls as yield rises.
+                    {t('land_chat_tutor_text')}
                 </div>
             </div>
         </div>
@@ -400,17 +396,17 @@ with col_r2_vis:
     )
 with col_r2_text:
     st.markdown(
-        """
+        f"""
         <div style="padding:1rem 0;">
             <span class="badge badge-low" style="margin-bottom:0.8rem; background:rgba(6,182,212,0.1); color:#06b6d4; border-color:rgba(6,182,212,0.3);">Context-Aware Tutor</span>
-            <h3 style="color:#f1f5f9; font-weight:700;">Context-Aware Study Assistant</h3>
+            <h3 style="color:#f1f5f9; font-weight:700;">{t('land_deep_dive_title2')}</h3>
             <p style="color:#94a3b8; font-size:0.95rem; line-height:1.6; margin-top:1rem;">
-                Unlike vanilla AI chatbots, our tutor keeps track of your profile data, mock exam history, and practice performance. When you ask a question, the tutor automatically targets formulas, calculations, and explanations to clarify concepts you missed in recent sessions.
+                {t('land_deep_dive_desc2')}
             </p>
             <ul style="color:#64748b; font-size:0.85rem; padding-left:1.2rem; line-height:1.8; margin-top:1rem;">
-                <li>Instant explanations of complicated formulas &amp; worked examples</li>
-                <li>Side-by-side tutoring directly linked from practice tests</li>
-                <li>One-click queries from predefined conversation starters</li>
+                <li>{t('land_deep_dive_li2_1')}</li>
+                <li>{t('land_deep_dive_li2_2')}</li>
+                <li>{t('land_deep_dive_li2_3')}</li>
             </ul>
         </div>
         """,
@@ -423,17 +419,17 @@ st.markdown("<br><br>", unsafe_allow_html=True)
 col_r3_text, col_r3_vis = st.columns([1.2, 1])
 with col_r3_text:
     st.markdown(
-        """
+        f"""
         <div style="padding:1rem 0;">
             <span class="badge badge-medium" style="margin-bottom:0.8rem; background:rgba(16,185,129,0.1); color:#10b981; border-color:rgba(16,185,129,0.3);">Spaced Repetition Engine</span>
-            <h3 style="color:#f1f5f9; font-weight:700;">Smart Spaced-Repetition Planner</h3>
+            <h3 style="color:#f1f5f9; font-weight:700;">{t('land_deep_dive_title3')}</h3>
             <p style="color:#94a3b8; font-size:0.95rem; line-height:1.6; margin-top:1rem;">
-                Never guess what to study next. The smart scheduler logs your exam results and schedules reviews at precise Ebbinghaus decay intervals (typically ~10 days after a low-score session). Available in both offline rule-based and AI-generated modes.
+                {t('land_deep_dive_desc3')}
             </p>
             <ul style="color:#64748b; font-size:0.85rem; padding-left:1.2rem; line-height:1.8; margin-top:1rem;">
-                <li>Dynamic phase adjustments (Core Study vs. Interleaved Practice vs. Mock Mode)</li>
-                <li>Adaptive scheduling based on exam date proximity</li>
-                <li>Integrates with weekday/weekend availability templates</li>
+                <li>{t('land_deep_dive_li3_1')}</li>
+                <li>{t('land_deep_dive_li3_2')}</li>
+                <li>{t('land_deep_dive_li3_3')}</li>
             </ul>
         </div>
         """,
@@ -441,27 +437,27 @@ with col_r3_text:
     )
 with col_r3_vis:
     st.markdown(
-        """
+        f"""
         <div class="cfa-card" style="background:#1e293b; padding:1.5rem; border-color:#334155; margin-top:1.5rem;">
-            <div style="font-size:0.8rem; text-transform:uppercase; color:#64748b; letter-spacing:0.05em; margin-bottom:0.8rem;">Upcoming Study Calendar</div>
+            <div style="font-size:0.8rem; text-transform:uppercase; color:#64748b; letter-spacing:0.05em; margin-bottom:0.8rem;">{t('land_cal_title')}</div>
             <div style="background:#0f172a; border-radius:6px; padding:0.6rem; margin-bottom:0.5rem; display:flex; justify-content:space-between; align-items:center; border-left:3px solid #ef4444;">
                 <div>
-                    <div style="color:#f1f5f9; font-size:0.8rem; font-weight:600;">Practice: Financial Statement Analysis</div>
-                    <div style="color:#64748b; font-size:0.7rem;">Target: Tomorrow · Score decay alert</div>
+                    <div style="color:#f1f5f9; font-size:0.8rem; font-weight:600;">{t('land_cal_prac_fsa')}</div>
+                    <div style="color:#64748b; font-size:0.7rem;">{t('land_cal_target_tomorrow')}</div>
                 </div>
                 <span class="badge badge-high" style="font-size:0.65rem;">High</span>
             </div>
             <div style="background:#0f172a; border-radius:6px; padding:0.6rem; margin-bottom:0.5rem; display:flex; justify-content:space-between; align-items:center; border-left:3px solid #f59e0b;">
                 <div>
-                    <div style="color:#f1f5f9; font-size:0.8rem; font-weight:600;">Review: Ethical and Professional Standards</div>
-                    <div style="color:#64748b; font-size:0.7rem;">Target: In 3 days · Spaced review</div>
+                    <div style="color:#f1f5f9; font-size:0.8rem; font-weight:600;">{t('land_cal_rev_ethics')}</div>
+                    <div style="color:#64748b; font-size:0.7rem;">{t('land_cal_target_3days')}</div>
                 </div>
                 <span class="badge badge-medium" style="font-size:0.65rem;">Medium</span>
             </div>
             <div style="background:#0f172a; border-radius:6px; padding:0.6rem; display:flex; justify-content:space-between; align-items:center; border-left:3px solid #10b981;">
                 <div>
-                    <div style="color:#f1f5f9; font-size:0.8rem; font-weight:600;">Mock Exam: Session 1 Simulation</div>
-                    <div style="color:#64748b; font-size:0.7rem;">Target: Weekend · Readiness evaluation</div>
+                    <div style="color:#f1f5f9; font-size:0.8rem; font-weight:600;">{t('land_cal_mock_sess1')}</div>
+                    <div style="color:#64748b; font-size:0.7rem;">{t('land_cal_target_weekend')}</div>
                 </div>
                 <span class="badge badge-low" style="font-size:0.65rem;">Low</span>
             </div>
