@@ -93,7 +93,7 @@ with st.sidebar:
 
 # ── Header ────────────────────────────────────────────────────────
 st.markdown(
-    """
+    f"""
     <div style="margin-bottom:1.5rem;">
         <h1 style="font-size:1.9rem; font-weight:800; color:#f1f5f9; margin:0;">{t("chat_title")}</h1>
         <p style="color:#64748b; margin-top:0.3rem;">

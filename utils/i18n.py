@@ -95,6 +95,7 @@ TRANSLATIONS: dict[str, dict[str, str]] = {
         "yes_reset": "✅ Yes, Reset",
         "cancel_reset": "❌ Cancel",
         "all_progress_reset": "All progress has been reset.",
+        "sidebar_logout": "🚪 Logout",
         # Practice Page
         "prac_adaptive": "🎯 Adaptive Practice",
         "prac_subtitle": "AI-generated questions customized to your learning needs",
