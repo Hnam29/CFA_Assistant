@@ -17,6 +17,7 @@ from database.db import (
 )
 from utils.auth import is_logged_in, get_current_user, render_auth_page
 from utils.cfa_topics import TOPIC_NAMES
+from utils.i18n import t
 from core.chatbot_engine import chat_with_tutor
 
 st.set_page_config(page_title="AI Tutor · CFA Assistant", page_icon="🤖", layout="wide")
@@ -67,12 +68,12 @@ context = st.session_state.pop("chatbot_context", "")
 
 # ── Sidebar ────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown("### 🤖 AI Tutor Settings")
+    st.markdown(t("chat_settings"))
 
-    quick_topic = st.selectbox("Quick Topic Focus", ["All Topics"] + TOPIC_NAMES, key="chat_topic")
+    quick_topic = st.selectbox(t("chat_focus"), ["All Topics"] + TOPIC_NAMES, key="chat_topic")
 
     st.markdown("---")
-    st.markdown(f"**💬 Conversation Starters** ({user_msg_count}/5 questions used)")
+    st.markdown(f"**{t('chat_starters')}** {t('chat_q_used', used=user_msg_count, limit=5)}")
 
     starters = [
         "Explain the differences between FIFO and LIFO inventory methods",
@@ -85,7 +86,7 @@ with st.sidebar:
             st.session_state["pending_message"] = starter
 
     st.markdown("---")
-    if st.button("🗑️ Clear Conversation", use_container_width=True, key="clear_chat"):
+    if st.button(t("chat_clear"), use_container_width=True, key="clear_chat"):
         clear_chat_history(uid)
         st.session_state.chat_messages = []
         st.rerun()
@@ -94,9 +95,9 @@ with st.sidebar:
 st.markdown(
     """
     <div style="margin-bottom:1.5rem;">
-        <h1 style="font-size:1.9rem; font-weight:800; color:#f1f5f9; margin:0;">🤖 AI Tutor</h1>
+        <h1 style="font-size:1.9rem; font-weight:800; color:#f1f5f9; margin:0;">{t("chat_title")}</h1>
         <p style="color:#64748b; margin-top:0.3rem;">
-            Your personal CFA Level I expert — ask anything about concepts, formulas, or exam strategy
+            {t("chat_subtitle")}
         </p>
     </div>
     """,
@@ -105,21 +106,21 @@ st.markdown(
 
 # ── Context banner ─────────────────────────────────────────────────
 if context:
-    st.info(f"📌 Context from your last session: *{context}*")
+    st.info(t("chat_context", context=context))
 
 # ── Chat display ───────────────────────────────────────────────────
 chat_container = st.container()
 with chat_container:
     if not st.session_state.chat_messages:
         st.markdown(
-            """
+            f"""
             <div style="text-align:center; padding:3rem 1rem; color:#64748b;">
                 <div style="font-size:3rem; margin-bottom:1rem;">🎓</div>
                 <div style="font-size:1.1rem; font-weight:600; color:#94a3b8; margin-bottom:0.5rem;">
-                    Ask me anything about CFA Level I
+                    {t('chat_empty1')}
                 </div>
                 <div style="font-size:0.88rem;">
-                    Try: "Explain the Dividend Discount Model" or "What is WACC?"
+                    {t('chat_empty2')}
                 </div>
             </div>
             """,
@@ -183,14 +184,14 @@ user_ctx = "\n".join(_user_ctx_lines) if _user_ctx_lines else ""
 
 if is_locked:
     st.markdown(
-        """<div style="background:rgba(239,68,68,0.1); border:1px solid #ef4444; border-radius:10px; padding:1rem; margin-top:1rem; margin-bottom:1rem; text-align:center; color:#fca5a5; font-size:0.9rem;">
-            🔒 Bạn đã sử dụng hết lượt hỏi miễn phí của phiên này (5 câu hỏi). Hãy liên hệ Admin để nâng cấp gói học tập hoặc xoá đoạn chat để bắt đầu lại!
+        f"""<div style="background:rgba(239,68,68,0.1); border:1px solid #ef4444; border-radius:10px; padding:1rem; margin-top:1rem; margin-bottom:1rem; text-align:center; color:#fca5a5; font-size:0.9rem;">
+            {t('chat_locked', limit=5)}
         </div>""",
         unsafe_allow_html=True
     )
-    user_input = st.chat_input("Chatbot đã khóa do hết lượt hỏi...", disabled=True)
+    user_input = st.chat_input(t("chat_locked", limit=5), disabled=True)
 else:
-    user_input = st.chat_input("Ask your CFA tutor anything... e.g. 'What is convexity and why does it matter?'")
+    user_input = st.chat_input(t("chat_placeholder"))
 
 # Handle send
 if (user_input or pending) and not is_locked:
@@ -208,7 +209,7 @@ if (user_input or pending) and not is_locked:
     # Get AI response
     history_for_api = st.session_state.chat_messages[:-1]  # all except the one we just added
 
-    with st.spinner("🤖 Thinking..."):
+    with st.spinner(t("chat_thinking")):
         try:
             response = chat_with_tutor(
                 messages=history_for_api,

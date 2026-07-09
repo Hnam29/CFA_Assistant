@@ -19,6 +19,7 @@ from database.db import (
 )
 from utils.auth import is_logged_in, get_current_user, render_auth_page
 from utils.cfa_topics import TOPIC_NAMES, get_subtopics
+from utils.i18n import t
 from core.scheduler_engine import generate_schedule, get_study_insights, generate_rule_based_schedule
 
 st.set_page_config(page_title="Schedule · CFA Assistant", page_icon="📅", layout="wide")
@@ -97,7 +98,7 @@ def draw_html_calendar(pending_sessions):
     </style>
     <div style="background:#0f172a; border:1px solid #1e293b; border-radius:14px; padding:1rem; margin:0 auto 1.5rem auto; max-width:640px; box-shadow:0 4px 20px rgba(0,0,0,0.15); overflow:visible;">
         <h4 style="color:#f1f5f9; margin:0 0 0.75rem 0; font-size:0.95rem; display:flex; align-items:center; gap:0.4rem; font-weight:700;">
-            📅 Scheduled Sessions Calendar ({month_name})
+            {t("sch_cal", month=month_name)}
         </h4>
         <div style="display:grid; grid-template-columns: repeat(7, 1fr); gap:4px; text-align:center; font-size:0.75rem; font-weight:600; color:#64748b; margin-bottom:4px;">
             <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
@@ -247,10 +248,10 @@ render_sidebar()
 
 # ── Header ────────────────────────────────────────────────────────
 st.markdown(
-    """
+    f"""
     <div style="margin-bottom:1.5rem;">
         <h1 style="font-size:1.9rem; font-weight:800; color:#f1f5f9; margin:0;">
-            📅 Learning Scheduler
+            {t("sch_title")}
         </h1>
         <p style="color:#64748b; margin-top:0.3rem;">
             Kanban-style study planning with AI-powered spaced repetition
@@ -268,8 +269,8 @@ all_by_status = get_all_scheduled_sessions_by_status(uid)
 # ─────────────────────────────────────────────────────────────────
 # OPTION SETTINGS PANEL (above Kanban)
 # ─────────────────────────────────────────────────────────────────
-with st.expander("⚙️ Generate / Add Study Plan", expanded=False):
-    tab_system, tab_manual, tab_insights = st.tabs(["🤖 Auto-Generate", "✍️ Add Custom", "💡 AI Insights"])
+with st.expander(t("sch_plan_gen"), expanded=False):
+    tab_system, tab_manual, tab_insights = st.tabs([t("sch_auto"), t("sch_manual"), t("sch_insights")])
 
     with tab_system:
         col_a, col_b, col_c = st.columns(3)
@@ -301,7 +302,7 @@ with st.expander("⚙️ Generate / Add Study Plan", expanded=False):
                 key="sys_free_slots",
             )
 
-        if st.button("🚀 Generate Study Plan", use_container_width=True, type="primary", key="gen_sys_plan"):
+        if st.button(t("sch_auto_btn"), use_container_width=True, type="primary", key="gen_sys_plan"):
             spinner_msg = (
                 "🧠 Running spaced repetition algorithm..."
                 if engine_mode == "🔌 Rule-Based (Spaced Repetition)"
@@ -339,20 +340,20 @@ with st.expander("⚙️ Generate / Add Study Plan", expanded=False):
                     st.error(f"Error: {e}")
 
     with tab_manual:
+        st.markdown(f"**{t('sch_manual')}**")
         col_m1, col_m2 = st.columns(2)
         with col_m1:
-            manual_date = st.date_input("Date", min_value=date.today(), key="man_date")
-            manual_topic = st.selectbox("📚 Topic", TOPIC_NAMES, key="man_topic")
+            manual_date = st.date_input(t("sch_date"), min_value=date.today(), key="man_date")
+            manual_topic = st.selectbox(t("sch_topic"), TOPIC_NAMES, key="man_topic")
             manual_subtopic = st.selectbox(
-                "🔍 Subtopic (optional)",
+                t("sch_subtopic"),
                 ["(none)"] + get_subtopics(st.session_state.get("man_topic", TOPIC_NAMES[0])),
                 key="man_subtopic"
             )
         with col_m2:
-            manual_type = st.selectbox("📝 Session Type", ["Practice", "Mock Exam", "Review"], key="man_type")
-            manual_priority = st.selectbox("⚡ Priority", ["high", "medium", "low"], index=1, key="man_priority")
+            manual_type = st.selectbox(t("sch_type"), ["Practice", "Mock Exam", "Review"], key="man_type")
+            manual_priority = st.selectbox(t("sch_priority"), ["high", "medium", "low"], index=1, key="man_priority")
             manual_reason = st.text_input("Reason / Note", placeholder="e.g. Cover Reading 15 & do 25 Qs", key="man_reason")
-
         if st.button("✍️ Add to Planner", type="primary", key="add_man_btn"):
             try:
                 subtopic_val = manual_subtopic if manual_subtopic != "(none)" else ""
@@ -414,7 +415,7 @@ all_by_status = get_all_scheduled_sessions_by_status(uid)
 COLUMNS = [
     {
         "key": "pending",
-        "label": "📋 Pending",
+        "label": t("sch_pending"),
         "color": "#6366f1",
         "border_color": "#6366f1",
         "empty_msg": "No pending sessions. Generate a plan above!",
@@ -422,7 +423,7 @@ COLUMNS = [
     },
     {
         "key": "done",
-        "label": "✅ Completed",
+        "label": t("sch_done"),
         "color": "#10b981",
         "border_color": "#10b981",
         "empty_msg": "Complete a session to see it here.",
@@ -430,7 +431,7 @@ COLUMNS = [
     },
     {
         "key": "skipped",
-        "label": "⏭️ Skipped",
+        "label": t("sch_skipped"),
         "color": "#f59e0b",
         "border_color": "#f59e0b",
         "empty_msg": "No skipped sessions.",
@@ -485,7 +486,7 @@ for col_idx, col_def in enumerate(COLUMNS):
 
                 # Action buttons below each card
                 if col_def["key"] == "pending":
-                    if st.button("🚀 Start Test", key=f"start_{s['id']}", type="primary", use_container_width=True):
+                    if st.button(t("sch_start_test"), key=f"start_{s['id']}", type="primary", use_container_width=True):
                         st.session_state["schedule_launch"] = {
                             "topic": s["topic"],
                             "session_type": s["session_type"],
@@ -497,11 +498,11 @@ for col_idx, col_def in enumerate(COLUMNS):
                             
                     btn_c1, btn_c2 = st.columns(2)
                     with btn_c1:
-                        if st.button("✓ Done", key=f"done_{s['id']}", use_container_width=True):
+                        if st.button(t("sch_mark_done"), key=f"done_{s['id']}", use_container_width=True):
                             mark_session_done(s["id"])
                             st.rerun()
                     with btn_c2:
-                        if st.button("🗑️ Delete", key=f"del_{s['id']}", use_container_width=True):
+                        if st.button(t("sch_delete"), key=f"del_{s['id']}", use_container_width=True):
                             delete_scheduled_session(s["id"])
                             st.rerun()
                 elif col_def["key"] == "skipped":

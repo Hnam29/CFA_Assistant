@@ -21,6 +21,7 @@ from database.db import (
 from utils.auth import is_logged_in, get_current_user, render_auth_page
 from utils.cfa_topics import TOPIC_NAMES, TOPIC_WEIGHTS, CFA_TOPICS
 from utils.charts import topic_bar_chart
+from utils.i18n import t
 from core.question_engine import generate_questions
 
 st.set_page_config(page_title="Mock Exam · CFA Assistant", page_icon="📝", layout="wide")
@@ -139,9 +140,9 @@ if "schedule_launch" in st.session_state:
 st.markdown(
     """
     <div style="margin-bottom:2rem;">
-        <h1 style="font-size:1.9rem; font-weight:800; color:#f1f5f9; margin:0;">📝 Mock Exam</h1>
+        <h1 style="font-size:1.9rem; font-weight:800; color:#f1f5f9; margin:0;">{t("mock_title")}</h1>
         <p style="color:#64748b; margin-top:0.3rem;">
-            Timed CFA-style exam with AI-generated questions weighted by your weak areas
+            {t("mock_subtitle")}
         </p>
     </div>
     """,
@@ -161,7 +162,7 @@ if not st.session_state.exam_started:
     if pending_mocks:
         with st.container(border=True):
             st.markdown(
-                """<h4 style="color:#818cf8; margin:0 0 0.2rem 0; font-size:1.05rem; display:flex; align-items:center; gap:0.5rem;">
+                f"""<h4 style="color:#818cf8; margin:0 0 0.2rem 0; font-size:1.05rem; display:flex; align-items:center; gap:0.5rem;">
                     🔄 Saved Mock Exams In Progress
                 </h4>
                 <p style="color:#94a3b8; font-size:0.8rem; margin:0 0 1rem 0;">
@@ -180,7 +181,7 @@ if not st.session_state.exam_started:
                 with row_col_info:
                     st.markdown(
                         f"""<div style="padding-top:0.35rem; display:flex; align-items:center;">
-                            <strong style="color:#f1f5f9; font-size:0.92rem;">📝 Mock Exam</strong>
+                            <strong style="color:#f1f5f9; font-size:0.92rem;">{t("mock_title")}</strong>
                             <span style="color:#64748b; font-size:0.75rem; margin-left:0.5rem;">
                                 ({answered_count}/{total_qs} Qs · {t_mins}m {t_secs}s)
                             </span>
@@ -188,7 +189,7 @@ if not st.session_state.exam_started:
                         unsafe_allow_html=True
                     )
                 with row_col_resume:
-                    if st.button("▶️ Resume", key=f"exam_resume_{pm['id']}", type="primary", use_container_width=True):
+                    if st.button(t("prac_resume"), key=f"exam_resume_{pm['id']}", type="primary", use_container_width=True):
                         st.session_state.exam_questions = state["questions"]
                         st.session_state.exam_answers = state["answers"]
                         st.session_state.exam_started = True
@@ -201,7 +202,7 @@ if not st.session_state.exam_started:
                         st.session_state.exam_duration_mins = state.get("exam_duration_mins", 30)
                         st.rerun()
                 with row_col_discard:
-                    if st.button("🗑️ Discard", key=f"exam_discard_{pm['id']}", use_container_width=True):
+                    if st.button(t("prac_discard"), key=f"exam_discard_{pm['id']}", use_container_width=True):
                         try:
                             discard_session(pm["id"])
                             st.toast("Saved mock exam discarded.")
@@ -214,7 +215,7 @@ if not st.session_state.exam_started:
 
     with col_l:
         st.markdown('<div class="cfa-card">', unsafe_allow_html=True)
-        st.markdown("#### ⚙️ Exam Configuration")
+        st.markdown(f"#### {t('mock_config')}")
 
         exam_mode = st.radio(
             "Exam Mode",
@@ -227,11 +228,11 @@ if not st.session_state.exam_started:
 
         exam_source = st.radio(
             "Exam Source",
-            ["🔌 Question Bank (Offline)", "🤖 AI-Generated (Online)"],
+            [t("prac_mode_bank"), t("prac_mode_ai")],
             key="exam_source",
             horizontal=True,
         )
-        use_bank_only = (exam_source == "🔌 Question Bank (Offline)")
+        use_bank_only = (exam_source == t("prac_mode_bank"))
 
         weighting = st.radio(
             "Question Weighting",
@@ -240,7 +241,7 @@ if not st.session_state.exam_started:
         )
         st.markdown("</div>", unsafe_allow_html=True)
 
-        if st.button("🚀 Start Mock Exam", use_container_width=True, type="primary", key="start_exam"):
+        if st.button(t("mock_start"), use_container_width=True, type="primary", key="start_exam"):
             # Build topic weights
             topic_perf = get_topic_performance(uid)
             perf_map = {p["topic"]: p["avg_score"] for p in topic_perf}
@@ -413,10 +414,10 @@ elif st.session_state.exam_started and not st.session_state.exam_submitted:
     with top_col1:
         st.markdown(
             f"""<div class="cbt-top-bar">
-                <div><strong>Question: {curr_idx + 1}</strong> of {total} &nbsp;|&nbsp; &#9201;
+                <div><strong>{t('prac_q_of_total', curr=curr_idx + 1, total=total)}</strong> &nbsp;|&nbsp; &#9201;
                     <strong><span id="exam-timer-display">{mins:02d}:{secs:02d}</span></strong>
                 </div>
-                <div>Candidate: <strong>{display_name}</strong></div>
+                <div>{t('prac_candidate')} <strong>{display_name}</strong></div>
             </div>""",
             unsafe_allow_html=True,
         )
@@ -484,7 +485,7 @@ elif st.session_state.exam_started and not st.session_state.exam_submitted:
     with top_col2:
         btn_c1, btn_c2 = st.columns(2)
         with btn_c1:
-            if st.button("⏸️ Pause", key="cbt_exam_pause_top", use_container_width=True, help="Save progress and return to dashboard"):
+            if st.button(t("prac_pause"), key="cbt_exam_pause_top", use_container_width=True):
                 elapsed_s = time.time() - st.session_state.exam_start_time
                 state_data = {
                     "questions": questions,
@@ -505,7 +506,7 @@ elif st.session_state.exam_started and not st.session_state.exam_submitted:
                 st.rerun()
 
         with btn_c2:
-            if st.button("Finish", key="cbt_exam_finish_top", use_container_width=True, type="primary"):
+            if st.button(t("prac_finish"), key="cbt_exam_finish_top", use_container_width=True, type="primary"):
                 unanswered = total - len(answers)
                 if unanswered > 0 and not st.session_state.exam_confirm_submit:
                     st.session_state.exam_confirm_submit = True
@@ -517,10 +518,10 @@ elif st.session_state.exam_started and not st.session_state.exam_submitted:
 
     if st.session_state.exam_confirm_submit:
         unanswered = total - len(answers)
-        st.warning(f"⚠️ You still have **{unanswered}** unanswered question(s). Unanswered questions will be marked as incorrect. Do you want to submit anyway?")
+        st.warning(t("prac_unanswered", unanswered=unanswered))
         conf_c1, conf_c2 = st.columns([1.5, 8.5])
         with conf_c1:
-            if st.button("✅ Yes, submit now", key="exam_confirm_yes", type="primary"):
+            if st.button(t("prac_confirm_yes"), key="exam_confirm_yes", type="primary"):
                 st.session_state.exam_submitted = True
                 st.session_state.exam_confirm_submit = False
                 st.rerun()
@@ -538,7 +539,7 @@ elif st.session_state.exam_started and not st.session_state.exam_submitted:
     body_col_left, body_col_right = st.columns([1.4, 8.6])
 
     with body_col_left:
-        st.markdown("<p style='text-align: center; font-weight: bold; margin-bottom: 0.5rem;'>Questions</p>", unsafe_allow_html=True)
+        st.markdown(f"<p style='text-align: center; font-weight: bold; margin-bottom: 0.5rem;'>{t('prac_questions_lbl')}</p>", unsafe_allow_html=True)
         with st.container(height=480):
             for idx in range(total):
                 ans_key = str(idx)
@@ -568,7 +569,7 @@ elif st.session_state.exam_started and not st.session_state.exam_submitted:
         idx_map = {"A": 0, "B": 1, "C": 2}
 
         selected = st.radio(
-            f"Select option for Q{curr_idx+1}",
+            t("prac_select_opt", idx=curr_idx+1),
             ["A", "B", "C"],
             index=idx_map.get(current_ans) if current_ans in idx_map else None,
             format_func=lambda x, q=q: f"{x}.  {q[f'option_{x.lower()}']}",
@@ -582,7 +583,7 @@ elif st.session_state.exam_started and not st.session_state.exam_submitted:
 
         # Clear Answer button — lets user unselect their choice
         if ans_key in answers:
-            if st.button("❌ Clear Answer", key=f"cbt_mock_clear_{curr_idx}"):
+            if st.button(t("prac_clear_sel"), key=f"cbt_mock_clear_{curr_idx}"):
                 answers.pop(ans_key, None)
                 st.session_state.exam_answers = answers
                 st.rerun()
@@ -594,7 +595,7 @@ elif st.session_state.exam_started and not st.session_state.exam_submitted:
     btm_c1, btm_c2, btm_c3 = st.columns([1.5, 1, 1])
     with btm_c1:
         is_flg = curr_idx in flags
-        flag_lbl = "🚩 Unflag" if is_flg else "🏳️ Flag Question"
+        flag_lbl = t("prac_unflag") if is_flg else t("prac_flag")
         if st.button(flag_lbl, key=f"cbt_mock_flag_btn_{curr_idx}", use_container_width=True):
             if is_flg:
                 flags.remove(curr_idx)
@@ -603,12 +604,12 @@ elif st.session_state.exam_started and not st.session_state.exam_submitted:
             st.session_state.exam_flags = flags
             st.rerun()
     with btm_c2:
-        if st.button("< Back", key=f"cbt_mock_back_{curr_idx}", use_container_width=True, disabled=curr_idx == 0):
+        if st.button(t("prac_back"), key=f"cbt_mock_back_{curr_idx}", use_container_width=True, disabled=curr_idx == 0):
             st.session_state.exam_current_idx = curr_idx - 1
             st.session_state.exam_confirm_submit = False
             st.rerun()
     with btm_c3:
-        if st.button("Next >", key=f"cbt_mock_next_{curr_idx}", use_container_width=True, disabled=curr_idx == total - 1):
+        if st.button(t("prac_next"), key=f"cbt_mock_next_{curr_idx}", use_container_width=True, disabled=curr_idx == total - 1):
             st.session_state.exam_current_idx = curr_idx + 1
             st.session_state.exam_confirm_submit = False
             st.rerun()
@@ -673,7 +674,7 @@ else:
                 {'Passed! 🎉' if score >= 70 else 'Below passing threshold'}
             </div>
             <div style="color:#64748b; margin-top:0.4rem;">
-                {correct_count}/{len(questions)} correct · {elapsed_mins:.0f} min
+                {t('prac_correct_time', correct=correct_count, total=len(questions), time=round(elapsed_mins, 1))}
             </div>
         </div>
         """,
@@ -699,20 +700,20 @@ else:
                 unsafe_allow_html=True,
             )
 
-    st.markdown("### 📝 Detailed Review")
+    st.markdown(f"### {t('prac_ans_review')}")
     for i, q in enumerate(questions):
         user_ans = answers.get(str(i), "?")
         correct  = q["correct_answer"]
         is_ok    = user_ans == correct
         icon = "✅" if is_ok else "❌"
         with st.expander(f"{icon} Q{i+1} — {q.get('topic','')} — {q['question'][:70]}..."):
-            st.markdown(f"**Your answer:** {user_ans}. {q.get(f'option_{user_ans.lower()}', 'N/A')}")
-            st.markdown(f"**Correct:** {correct}. {q[f'option_{correct.lower()}']}")
-            st.markdown(f"**Explanation:** {q['explanation']}")
+            st.markdown(f"**{t('prac_your_ans')}** {user_ans}. {q.get(f'option_{user_ans.lower()}', 'N/A')}" if user_ans != "?" else t("prac_not_answered"))
+            st.markdown(f"**{t('prac_correct_ans')}** {correct}. {q[f'option_{correct.lower()}']}")
+            st.markdown(f"**{t('prac_explanation')}** {q['explanation']}")
 
     col_eb1, col_eb2 = st.columns(2)
     with col_eb1:
-        if st.button("🔄 New Exam", use_container_width=True, type="primary", key="new_exam"):
+        if st.button(t("mock_take_another"), use_container_width=True, type="primary", key="new_exam"):
             for k in ["exam_questions","exam_answers","exam_started","exam_submitted","exam_start_time","exam_session_id"]:
                 st.session_state.pop(k, None)
             st.rerun()

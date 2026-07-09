@@ -22,6 +22,7 @@ from database.db import (
 from utils.auth import is_logged_in, get_current_user, render_auth_page
 from utils.cfa_topics import TOPIC_NAMES, get_subtopics, DIFFICULTY_LEVELS, normalize_topic_name
 from utils.sidebar import render_sidebar
+from utils.i18n import t
 from core.question_engine import generate_questions
 
 st.set_page_config(page_title="Practice · CFA Assistant", page_icon="🎯", layout="wide")
@@ -99,13 +100,13 @@ if "schedule_launch" in st.session_state:
 
 # ── Header ────────────────────────────────────────────────────────
 st.markdown(
-    """
+    f"""
     <div style="margin-bottom:2rem;">
         <h1 style="font-size:1.9rem; font-weight:800; color:#f1f5f9; margin:0;">
-            🎯 Adaptive Practice
+            {t("prac_adaptive")}
         </h1>
         <p style="color:#64748b; margin-top:0.3rem;">
-            AI-generated questions customized to your learning needs
+            {t("prac_subtitle")}
         </p>
     </div>
     """,
@@ -127,7 +128,7 @@ if not st.session_state.practice_questions:
     tab_col1, tab_col2, tab_col_spacer = st.columns([1.6, 2, 6])
     with tab_col1:
         if st.button(
-            "🎯 Start Practice",
+            t("prac_start_tab"),
             use_container_width=True,
             type="primary" if st.session_state.prac_active_tab == "setup" else "secondary",
             key="nav_tab_setup",
@@ -136,7 +137,7 @@ if not st.session_state.practice_questions:
             st.rerun()
     with tab_col2:
         if st.button(
-            "📁 Question Bank",
+            t("prac_bank_tab"),
             use_container_width=True,
             type="primary" if st.session_state.prac_active_tab == "manage" else "secondary",
             key="nav_tab_manage",
@@ -157,11 +158,11 @@ if not st.session_state.practice_questions:
         if pending_prac:
             with st.container(border=True):
                 st.markdown(
-                    """<h4 style="color:#34d399; margin:0 0 0.2rem 0; font-size:1.05rem; display:flex; align-items:center; gap:0.5rem;">
-                        🔄 Saved Practice Sessions In Progress
+                    f"""<h4 style="color:#34d399; margin:0 0 0.2rem 0; font-size:1.05rem; display:flex; align-items:center; gap:0.5rem;">
+                        {t('prac_saved_sessions')}
                     </h4>
                     <p style="color:#94a3b8; font-size:0.8rem; margin:0 0 1rem 0;">
-                        Resume an active session below or discard it to start a new one.
+                        {t('prac_saved_subtext')}
                     </p>""",
                     unsafe_allow_html=True
                 )
@@ -184,7 +185,7 @@ if not st.session_state.practice_questions:
                             unsafe_allow_html=True
                         )
                     with row_col_resume:
-                        if st.button("▶️ Resume", key=f"prac_resume_{ps['id']}", type="primary", use_container_width=True):
+                        if st.button(t("prac_resume"), key=f"prac_resume_{ps['id']}", type="primary", use_container_width=True):
                             st.session_state.practice_questions = state["questions"]
                             st.session_state.practice_answers = state["answers"]
                             st.session_state.practice_submitted = False
@@ -197,7 +198,7 @@ if not st.session_state.practice_questions:
                             st.session_state.practice_radio_versions = {}
                             st.rerun()
                     with row_col_discard:
-                        if st.button("🗑️ Discard", key=f"prac_discard_{ps['id']}", use_container_width=True):
+                        if st.button(t("prac_discard"), key=f"prac_discard_{ps['id']}", use_container_width=True):
                             try:
                                 discard_session(ps["id"])
                                 st.toast("Saved session discarded.")
@@ -210,55 +211,55 @@ if not st.session_state.practice_questions:
 
         with col_setup:
             st.markdown(
-                """<div class="cfa-card">
-                    <div class="section-header">⚙️ Configure Your Practice Session</div>
+                f"""<div class="cfa-card">
+                    <div class="section-header">{t('prac_config_header')}</div>
                 """,
                 unsafe_allow_html=True,
             )
             practice_mode = st.radio(
-                "Practice Mode",
-                ["🔌 Question Bank (Offline)", "🤖 AI-Generated (Online)"],
+                t("prac_mode"),
+                [t("prac_mode_bank"), t("prac_mode_ai")],
                 horizontal=True,
                 key="prac_mode",
             )
-            use_bank_only = practice_mode == "🔌 Question Bank (Offline)"
+            use_bank_only = practice_mode == t("prac_mode_bank")
 
-            topic = st.selectbox("📚 Topic", TOPIC_NAMES, key="prac_topic")
+            topic = st.selectbox(t("prac_topic"), TOPIC_NAMES, key="prac_topic")
             subtopics_available = get_subtopics(topic)
             selected_subtopics = st.multiselect(
-                "🔍 Subtopics (optional — leave blank for all)",
+                t("prac_subtopics"),
                 subtopics_available,
                 key="prac_subtopics",
             )
             difficulty = st.select_slider(
-                "⚡ Difficulty",
+                t("prac_difficulty"),
                 options=DIFFICULTY_LEVELS,
                 value="Medium",
                 key="prac_difficulty",
             )
-            num_questions = st.slider("📝 Number of Questions", min_value=3, max_value=15, value=5, key="prac_num")
+            num_questions = st.slider(t("prac_num_qs"), min_value=3, max_value=15, value=5, key="prac_num")
             st.markdown("</div>", unsafe_allow_html=True)
 
         with col_info:
             st.markdown(
-                """
+                f"""
                 <div class="cfa-card" style="height:100%;">
-                    <div class="section-header">💡 How Practice Modes Work</div>
-                    <strong style="color:#f1f5f9; display:block; margin-top:0.8rem;">🔌 Question Bank (Offline)</strong>
+                    <div class="section-header">{t('prac_how_it_works')}</div>
+                    <strong style="color:#f1f5f9; display:block; margin-top:0.8rem;">{t('prac_mode_bank')}</strong>
                     <ul style="color:#94a3b8; font-size:0.85rem; line-height:1.6; padding-left:1.2rem; margin-top:0.3rem;">
-                        <li>Runs completely offline using the pre-loaded CFA question bank</li>
-                        <li>Bypasses AI API usage and keys entirely</li>
-                        <li>Great for standard prep and mock simulation</li>
+                        <li>{t('prac_bank_desc1')}</li>
+                        <li>{t('prac_bank_desc2')}</li>
+                        <li>{t('prac_bank_desc3')}</li>
                     </ul>
-                    <strong style="color:#f1f5f9;">🤖 AI-Generated (Online)</strong>
+                    <strong style="color:#f1f5f9;">{t('prac_mode_ai')}</strong>
                     <ul style="color:#94a3b8; font-size:0.85rem; line-height:1.6; padding-left:1.2rem; margin-top:0.3rem;">
-                        <li>AI prioritizes weak areas based on your study history</li>
-                        <li>Fresh questions crafted for each session</li>
-                        <li>Integrates uploaded question examples for structure</li>
+                        <li>{t('prac_ai_desc1')}</li>
+                        <li>{t('prac_ai_desc2')}</li>
+                        <li>{t('prac_ai_desc3')}</li>
                     </ul>
                     <hr style="border-color:#334155; margin:0.8rem 0 !important;">
                     <div style="color:#64748b; font-size:0.8rem;">
-                        🔑 <strong style="color:#94a3b8;">Tip:</strong> The CFA question bank is pre-loaded by default. You can also upload your own questions to expand it!
+                        🔑 <strong style="color:#94a3b8;">{t('prac_tip')}</strong> {t('prac_tip_desc')}
                     </div>
                 </div>
                 """,
@@ -268,10 +269,10 @@ if not st.session_state.practice_questions:
         # Generate button — rendered at top level, completely outside any column/tab context
         topic_count = _bank_stats.get(topic, 0)
         if use_bank_only and topic_count == 0:
-            st.warning(f"⚠️ Your local question bank is empty for **{topic}**.")
-            st.info("Switch to the **📁 Question Bank** tab above to upload questions first.")
+            st.warning(f"{t('prac_empty_bank')} **{topic}**.")
+            st.info(t("prac_switch_tab"))
         else:
-            if st.button("🚀 Generate Questions", use_container_width=True, type="primary", key="gen_btn"):
+            if st.button(t("prac_gen_btn"), use_container_width=True, type="primary", key="gen_btn"):
                 spinner_msg = (
                     f"📦 Loading {num_questions} questions from your local bank..."
                     if use_bank_only
@@ -309,12 +310,12 @@ if not st.session_state.practice_questions:
         col_u1, col_u2 = st.columns([1.2, 1])
         with col_u1:
             st.markdown(
-                """<div class="cfa-card">
-                    <div class="section-header">📥 Import Questions</div>
+                f"""<div class="cfa-card">
+                    <div class="section-header">{t('prac_import_header')}</div>
                 """,
                 unsafe_allow_html=True,
             )
-            st.write("Upload an Excel (`.xlsx`) or CSV (`.csv`) file to add more custom questions. By default, the system is pre-loaded with the CFA question bank.")
+            st.write(t("prac_import_desc"))
 
             # Built-in template Excel download button
             template_data = {
@@ -348,36 +349,35 @@ if not st.session_state.practice_questions:
 
             if excel_ready:
                 st.download_button(
-                    label="📥 Download Excel Template (.xlsx)",
+                    label=t("prac_dl_excel"),
                     data=excel_data,
                     file_name="cfa_question_bank_template.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    help="Download an Excel sheet with pre-configured headers and a sample question. Fill it out and upload it below.",
                     use_container_width=True
                 )
             else:
                 st.download_button(
-                    label="📥 Download CSV Template (.csv)",
+                    label=t("prac_dl_csv"),
                     data=excel_data,
                     file_name="cfa_question_bank_template.csv",
                     mime="text/csv",
-                    help="Download a CSV template with pre-configured headers. (Excel engine openpyxl is missing).",
                     use_container_width=True
                 )
 
             st.markdown("<br>", unsafe_allow_html=True)
             uploaded_file = st.file_uploader(
-                "Select Excel or CSV File",
+                "File",
                 type=["xlsx", "csv"],
-                key="bank_file_uploader"
+                key="bank_file_uploader",
+                label_visibility="collapsed"
             )
 
             if "import_success" in st.session_state:
                 st.success(st.session_state.pop("import_success"))
 
             if uploaded_file is not None:
-                st.info(f"📄 File loaded: **{uploaded_file.name}**")
-                if st.button("🚀 Confirm and Import Questions", key="confirm_import_btn", type="primary", use_container_width=True):
+                st.info(f"📄 File: **{uploaded_file.name}**")
+                if st.button(t("prac_confirm_import"), key="confirm_import_btn", type="primary", use_container_width=True):
                     try:
                         if uploaded_file.name.endswith(".csv"):
                             df = pd.read_csv(uploaded_file)
@@ -445,27 +445,27 @@ if not st.session_state.practice_questions:
 
         with col_u2:
             st.markdown(
-                """<div class="cfa-card">
-                    <div class="section-header">📊 Question Bank Status</div>
+                f"""<div class="cfa-card">
+                    <div class="section-header">{t('prac_bank_status')}</div>
                 """,
                 unsafe_allow_html=True,
             )
             if _bank_stats:
-                for t, count in _bank_stats.items():
-                    st.markdown(f"- **{t}**: {count} questions")
+                for t_name, count in _bank_stats.items():
+                    st.markdown(f"- **{t_name}**: {count} questions")
                 st.markdown("---")
-                if st.button("🗑️ Clear Local Question Bank", type="secondary", use_container_width=True, key="clear_bank_btn"):
+                if st.button(t("prac_clear_bank"), type="secondary", use_container_width=True, key="clear_bank_btn"):
                     delete_bank_questions()
-                    st.success("Successfully cleared all questions in the bank.")
+                    st.success("Cleared")
                     st.rerun()
             else:
-                st.info("Your local question bank is currently empty.")
+                st.info(t("prac_empty_bank_info"))
 
             st.markdown(
-                """
+                f"""
                 <div style="background:#1e293b; border:1px solid #334155; border-radius:8px; padding:0.75rem; margin-top:1rem; font-size:0.8rem; color:#94a3b8;">
-                    <strong>ℹ️ File Template Columns:</strong><br>
-                    <code>Topic</code>, <code>Subtopic</code>, <code>Difficulty</code> (Easy/Medium/Hard), <code>Question</code>, <code>Option A</code>, <code>Option B</code>, <code>Option C</code>, <code>Correct Answer</code> (A/B/C), <code>Explanation</code>
+                    <strong>{t('prac_file_template')}</strong><br>
+                    <code>Topic</code>, <code>Subtopic</code>, <code>Difficulty</code>, <code>Question</code>, <code>Option A</code>, <code>Option B</code>, <code>Option C</code>, <code>Correct Answer</code> (A/B/C), <code>Explanation</code>
                 </div>
                 """,
                 unsafe_allow_html=True
@@ -542,10 +542,10 @@ elif not st.session_state.practice_submitted:
         # Static info row
         st.markdown(
             f"""<div class="cbt-top-bar">
-                <div><strong>Question: {curr_idx + 1}</strong> of {total} &nbsp;|&nbsp; &#9201;
+                <div><strong>{t("prac_q_of_total", curr=curr_idx + 1, total=total)}</strong> &nbsp;|&nbsp; &#9201;
                     <strong><span id="prac-timer-display">{t_mins:02d}:{t_secs:02d}</span></strong>
                 </div>
-                <div>Candidate: <strong>{display_name}</strong></div>
+                <div>{t("prac_candidate")} <strong>{display_name}</strong></div>
             </div>""",
             unsafe_allow_html=True,
         )
@@ -611,7 +611,7 @@ elif not st.session_state.practice_submitted:
     with top_col2:
         btn_c1, btn_c2 = st.columns(2)
         with btn_c1:
-            if st.button("⏸️ Pause", key="cbt_pause_top", use_container_width=True, help="Save progress and return to dashboard"):
+            if st.button(t("prac_pause"), key="cbt_pause_top", use_container_width=True):
                 elapsed_s = time.time() - st.session_state.practice_start_time
                 state_data = {
                     "questions": questions,
@@ -632,7 +632,7 @@ elif not st.session_state.practice_submitted:
                 st.rerun()
 
         with btn_c2:
-            if st.button("Finish", key="cbt_finish_top", use_container_width=True, type="primary"):
+            if st.button(t("prac_finish"), key="cbt_finish_top", use_container_width=True, type="primary"):
                 unanswered = total - len(answers)
                 if unanswered > 0 and not st.session_state.practice_confirm_submit:
                     st.session_state.practice_confirm_submit = True
@@ -644,10 +644,10 @@ elif not st.session_state.practice_submitted:
 
     if st.session_state.practice_confirm_submit:
         unanswered = total - len(answers)
-        st.warning(f"⚠️ You still have **{unanswered}** unanswered question(s). Unanswered questions will be marked as incorrect. Do you want to finish anyway?")
+        st.warning(t("prac_unanswered", unanswered=unanswered))
         conf_c1, conf_c2 = st.columns([1.5, 8.5])
         with conf_c1:
-            if st.button("✅ Yes, finish now", key="prac_confirm_yes", type="primary"):
+            if st.button(t("prac_confirm_yes"), key="prac_confirm_yes", type="primary"):
                 st.session_state.practice_submitted = True
                 st.session_state.practice_confirm_submit = False
                 st.rerun()
@@ -655,8 +655,8 @@ elif not st.session_state.practice_submitted:
     # 2. CBT Green Sub-bar
     st.markdown(
         f"""<div class="cbt-subbar">
-            <div>Topic: {q.get('topic', '')} · {q.get('subtopic', '')}</div>
-            <div>Difficulty: {q.get('difficulty', 'Medium')}</div>
+            <div>{t("prac_topic_lbl")} {q.get('topic', '')} · {q.get('subtopic', '')}</div>
+            <div>{t("prac_diff_lbl")} {q.get('difficulty', 'Medium')}</div>
         </div>""",
         unsafe_allow_html=True,
     )
@@ -665,7 +665,7 @@ elif not st.session_state.practice_submitted:
     body_col_left, body_col_right = st.columns([1.2, 8.8])
 
     with body_col_left:
-        st.markdown("<p style='text-align: center; font-weight: bold; margin-bottom: 0.5rem;'>Questions</p>", unsafe_allow_html=True)
+        st.markdown(f"<p style='text-align: center; font-weight: bold; margin-bottom: 0.5rem;'>{t('prac_questions_lbl')}</p>", unsafe_allow_html=True)
         with st.container(height=480):
             for idx in range(total):
                 is_ans = str(idx) in answers
@@ -694,7 +694,7 @@ elif not st.session_state.practice_submitted:
         radio_ver = st.session_state.practice_radio_versions.get(curr_idx, 0)
 
         selected = st.radio(
-            f"Select option for Q{curr_idx+1}",
+            t("prac_select_opt", idx=curr_idx+1),
             ["A", "B", "C"],
             index=idx_map[user_choice] if user_choice in idx_map else None,
             format_func=lambda x, q=q: f"{x}.  {q[f'option_{x.lower()}']}",
@@ -708,14 +708,14 @@ elif not st.session_state.practice_submitted:
         if not is_answered:
             btn_col1, btn_col2 = st.columns([1.4, 1])
             with btn_col1:
-                if st.button("Submit Answer", key=f"cbt_confirm_{curr_idx}", type="primary", disabled=selected is None):
+                if st.button(t("prac_submit_ans"), key=f"cbt_confirm_{curr_idx}", type="primary", disabled=selected is None):
                     answers[str(curr_idx)] = {"selected": selected, "time": time.time()}
                     st.session_state.practice_answers = answers
                     st.rerun()
             with btn_col2:
                 # Clear Selection — resets radio to unselected by bumping the widget key version
                 if selected is not None:
-                    if st.button("❌ Clear Selection", key=f"cbt_clear_{curr_idx}"):
+                    if st.button(t("prac_clear_sel"), key=f"cbt_clear_{curr_idx}"):
                         vers = st.session_state.practice_radio_versions
                         vers[curr_idx] = vers.get(curr_idx, 0) + 1
                         st.session_state.practice_radio_versions = vers
@@ -725,12 +725,11 @@ elif not st.session_state.practice_submitted:
             correct = q["correct_answer"]
             is_ok = user_ans == correct
             result_class = "answer-correct" if is_ok else "answer-wrong"
-            icon = "✅" if is_ok else "❌"
             st.markdown(
                 f"""<div class="{result_class}">
-                    <strong>{icon} {'Correct!' if is_ok else f'Incorrect. Correct answer is {correct}'}</strong>
+                    <strong>{t('prac_correct') if is_ok else t('prac_incorrect', correct=correct)}</strong>
                     <div style="margin-top:0.5rem; color:#94a3b8; font-size:0.9rem; line-height:1.6;">
-                        <strong style="color:#f1f5f9;">Explanation:</strong> {q['explanation']}
+                        <strong style="color:#f1f5f9;">{t('prac_explanation')}</strong> {q['explanation']}
                     </div>
                 </div>""",
                 unsafe_allow_html=True,
@@ -743,7 +742,7 @@ elif not st.session_state.practice_submitted:
     btm_c1, btm_c2, btm_c3 = st.columns([1.5, 1, 1])
     with btm_c1:
         is_flg = curr_idx in flags
-        flag_lbl = "🚩 Unflag" if is_flg else "🏳️ Flag Question"
+        flag_lbl = t("prac_unflag") if is_flg else t("prac_flag")
         if st.button(flag_lbl, key=f"cbt_flag_btn_{curr_idx}", use_container_width=True):
             if is_flg:
                 flags.remove(curr_idx)
@@ -752,12 +751,12 @@ elif not st.session_state.practice_submitted:
             st.session_state.practice_flags = flags
             st.rerun()
     with btm_c2:
-        if st.button("< Back", key=f"cbt_back_btn_{curr_idx}", use_container_width=True, disabled=curr_idx == 0):
+        if st.button(t("prac_back"), key=f"cbt_back_btn_{curr_idx}", use_container_width=True, disabled=curr_idx == 0):
             st.session_state.practice_current_idx = curr_idx - 1
             st.session_state.practice_confirm_submit = False
             st.rerun()
     with btm_c3:
-        if st.button("Next >", key=f"cbt_next_btn_{curr_idx}", use_container_width=True, disabled=curr_idx == total - 1):
+        if st.button(t("prac_next"), key=f"cbt_next_btn_{curr_idx}", use_container_width=True, disabled=curr_idx == total - 1):
             st.session_state.practice_current_idx = curr_idx + 1
             st.session_state.practice_confirm_submit = False
             st.rerun()
@@ -804,7 +803,7 @@ else:
 
     # Results header
     color = "#10b981" if score >= 70 else "#f59e0b" if score >= 50 else "#ef4444"
-    msg   = "Excellent!" if score >= 70 else "Good effort!" if score >= 50 else "Keep studying!"
+    msg   = t("prac_excellent") if score >= 70 else t("prac_good_effort") if score >= 50 else t("prac_keep_studying")
 
     st.markdown(
         f"""
@@ -812,7 +811,7 @@ else:
             <div style="font-size:4rem; font-weight:900; color:{color};">{score:.0f}%</div>
             <div style="font-size:1.5rem; font-weight:700; color:#f1f5f9;">{msg}</div>
             <div style="color:#64748b; margin-top:0.5rem;">
-                {correct_count}/{len(questions)} correct · {elapsed:.1f} min
+                {t('prac_correct_time', correct=correct_count, total=len(questions), time=round(elapsed, 1))}
             </div>
         </div>
         """,
@@ -820,7 +819,7 @@ else:
     )
 
     # Per-question review
-    st.markdown("### 📋 Answer Review")
+    st.markdown(f"### {t('prac_ans_review')}")
     for i, q in enumerate(questions):
         ans_data = answers.get(str(i), {})
         user_ans = ans_data.get("selected", "?")
@@ -829,19 +828,19 @@ else:
         icon = "✅" if is_ok else "❌"
 
         with st.expander(f"{icon} Q{i+1}: {q['question'][:80]}..."):
-            st.markdown(f"**Your answer:** {user_ans}. {q[f'option_{user_ans.lower()}']}" if user_ans != "?" else "Not answered")
-            st.markdown(f"**Correct answer:** {correct}. {q[f'option_{correct.lower()}']}")
+            st.markdown(f"**{t('prac_your_ans')}** {user_ans}. {q[f'option_{user_ans.lower()}']}" if user_ans != "?" else t("prac_not_answered"))
+            st.markdown(f"**{t('prac_correct_ans')}** {correct}. {q[f'option_{correct.lower()}']}")
             st.markdown("---")
-            st.markdown(f"**Explanation:** {q['explanation']}")
+            st.markdown(f"**{t('prac_explanation')}** {q['explanation']}")
 
     col_r1, col_r2 = st.columns(2)
     with col_r1:
-        if st.button("🔄 Practice Again", use_container_width=True, type="primary", key="again_btn"):
+        if st.button(t("prac_again"), use_container_width=True, type="primary", key="again_btn"):
             st.session_state.practice_questions = []
             st.session_state.practice_answers = {}
             st.session_state.practice_submitted = False
             st.rerun()
     with col_r2:
-        if st.button("🤖 Ask AI Tutor about this topic", use_container_width=True, key="go_chat"):
+        if st.button(t("prac_ask_ai"), use_container_width=True, key="go_chat"):
             st.session_state["chatbot_context"] = f"I just completed a {topic} practice session and scored {score:.0f}%."
             st.switch_page("pages/4_Chatbot.py")
