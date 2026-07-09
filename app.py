@@ -472,7 +472,7 @@ st.markdown("<br><br><br><hr style='border-color:#334155;'><br>", unsafe_allow_h
 st.markdown(
     f"""
     <div style="text-align:center; padding: 2rem 0; color:#64748b; font-size:0.8rem;">
-        <p>📊 CFA Learning Assistant — Empowered by Advanced AI</p>
+        <p>📊 CFA Learning Assistant</p>
         <p style="margin-top:0.4rem; color:#475569;">
             {t('footer_disclaimer')}
         </p>
