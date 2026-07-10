@@ -9,9 +9,9 @@ from typing import Dict, List
 
 # CFA Level I — official topic area weights (2025/2026/2027 curriculum)
 # The CFA Institute publishes weight RANGES; we use the midpoint of each range.
-# Official ranges: Ethics 15-20%, FSA/Fixed Income/Equities 11-14%,
-# Portfolio Construction 8-12%, Alternatives 7-10%,
-# Quant/Economics/Corporate Finance 6-9%, Derivatives 5-8%
+# Official ranges: Ethics 15-20%, FSA/Fixed Income/Equity Investments 11-14%,
+# Portfolio Management 8-12%, Alternatives 7-10%,
+# Quant/Economics/Corporate Issuers 6-9%, Derivatives 5-8%
 CFA_TOPICS: Dict[str, Dict] = {
 
     # ── 1. Ethical and Professional Standards ─────────────────────────────────
@@ -85,8 +85,8 @@ CFA_TOPICS: Dict[str, Dict] = {
         ],
     },
 
-    # ── 5. Corporate Finance ──────────────────────────────────────────────────
-    "Corporate Finance": {
+    # ── 5. Corporate Issuers ──────────────────────────────────────────────────
+    "Corporate Issuers": {
         "weight": 8,
         "color": "#10b981",
         "subtopics": [
@@ -98,8 +98,8 @@ CFA_TOPICS: Dict[str, Dict] = {
         ],
     },
 
-    # ── 6. Equities ───────────────────────────────────────────────────────────
-    "Equities": {
+    # ── 6. Equity Investments ───────────────────────────────────────────────────
+    "Equity Investments": {
         "weight": 12,
         "color": "#f59e0b",
         "subtopics": [
@@ -203,8 +203,8 @@ TOPIC_NAME_MIGRATIONS: Dict[str, str] = {
     "Ethics and Professional Standards": "Ethical and Professional Standards",
     "Ethical and Professional": "Ethical and Professional Standards",
     "Financial Statement": "Financial Statement Analysis",
-    "Equity Investments": "Equities",
-    "Corporate Issuers": "Corporate Finance",
+    "Equities": "Equity Investments",
+    "Corporate Finance": "Corporate Issuers",
     "Portfolio Construction": "Portfolio Management",
 }
 

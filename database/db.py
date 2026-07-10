@@ -239,15 +239,15 @@ def init_db() -> None:
             if count == 0:
                 TOPIC_WEIGHTS = {
                     "Ethical and Professional Standards": 17.5,
-                    "Quantitative Methods": 9.0,
-                    "Economics": 9.0,
+                    "Quantitative Methods": 7.5,
+                    "Economics": 7.5,
                     "Financial Statement Analysis": 12.5,
-                    "Corporate Finance": 9.0,
-                    "Equities": 11.5,
-                    "Fixed Income": 11.5,
-                    "Derivatives": 6.5,
-                    "Alternative Investments": 6.5,
-                    "Portfolio Construction": 6.5
+                    "Corporate Issuers": 7.5,
+                    "Equity Investments": 12.5,
+                    "Fixed Income": 12.5,
+                    "Derivatives": 6.0,
+                    "Alternative Investments": 8.0,
+                    "Portfolio Management": 8.5
                 }
                 for topic, weight in TOPIC_WEIGHTS.items():
                     conn.execute(
@@ -327,15 +327,15 @@ def init_db() -> None:
             if count == 0:
                 TOPIC_WEIGHTS = {
                     "Ethical and Professional Standards": 17.5,
-                    "Quantitative Methods": 9.0,
-                    "Economics": 9.0,
+                    "Quantitative Methods": 7.5,
+                    "Economics": 7.5,
                     "Financial Statement Analysis": 12.5,
-                    "Corporate Finance": 9.0,
-                    "Equities": 11.5,
-                    "Fixed Income": 11.5,
-                    "Derivatives": 6.5,
-                    "Alternative Investments": 6.5,
-                    "Portfolio Management": 6.5
+                    "Corporate Issuers": 7.5,
+                    "Equity Investments": 12.5,
+                    "Fixed Income": 12.5,
+                    "Derivatives": 6.0,
+                    "Alternative Investments": 8.0,
+                    "Portfolio Management": 8.5
                 }
                 for topic, weight in TOPIC_WEIGHTS.items():
                     conn.execute("INSERT OR IGNORE INTO curriculum_weights (topic, weight) VALUES (?, ?)", (topic, weight))
@@ -346,8 +346,8 @@ def init_db() -> None:
         TOPIC_RENAMES = [
             ("Ethics & Professional Standards",  "Ethical and Professional Standards"),
             ("Ethics and Professional Standards", "Ethical and Professional Standards"),
-            ("Equity Investments",               "Equities"),
-            ("Corporate Issuers",                "Corporate Finance"),
+            ("Equities",                         "Equity Investments"),
+            ("Corporate Finance",                "Corporate Issuers"),
             ("Portfolio Construction",           "Portfolio Management"),
         ]
         tables_with_topic = ["study_sessions", "questions", "topic_performance", "scheduled_sessions", "curriculum_weights"]
