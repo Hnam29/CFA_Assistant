@@ -24,6 +24,9 @@ from utils.charts import topic_bar_chart
 from utils.i18n import t
 from core.question_engine import generate_questions
 
+def make_strikethrough(text: str) -> str:
+    return "".join(char + "\u0336" if char != " " else " " for char in text)
+
 st.set_page_config(page_title="Mock Exam · CFA Assistant", page_icon="📝", layout="wide")
 
 css = Path(__file__).parent.parent / "assets" / "styles.css"
@@ -54,6 +57,7 @@ for key, default in [
     ("exam_current_idx", 0),
     ("exam_flags", set()),
     ("exam_confirm_submit", False),
+    ("exam_eliminated", {}),
 ]:
     if key not in st.session_state:
         st.session_state[key] = default
@@ -130,6 +134,7 @@ if "schedule_launch" in st.session_state:
                 st.session_state.exam_current_idx  = 0
                 st.session_state.exam_flags        = set()
                 st.session_state.exam_confirm_submit = False
+                st.session_state.exam_eliminated   = {}
                 st.rerun()
             else:
                 st.error("Could not find or generate questions for the mock exam.")
@@ -200,6 +205,8 @@ if not st.session_state.exam_started:
                         st.session_state.exam_flags = set(state.get("flags", []))
                         st.session_state.exam_confirm_submit = False
                         st.session_state.exam_duration_mins = state.get("exam_duration_mins", 30)
+                        raw_elim = state.get("eliminated", {})
+                        st.session_state.exam_eliminated = {int(k): set(v) for k, v in raw_elim.items()}
                         st.rerun()
                 with row_col_discard:
                     if st.button(t("prac_discard"), key=f"exam_discard_{pm['id']}", use_container_width=True):
@@ -322,6 +329,7 @@ if not st.session_state.exam_started:
                 st.session_state.exam_current_idx  = 0
                 st.session_state.exam_flags        = set()
                 st.session_state.exam_confirm_submit = False
+                st.session_state.exam_eliminated   = {}
                 st.rerun()
 
     with col_r:
@@ -383,6 +391,7 @@ elif st.session_state.exam_started and not st.session_state.exam_submitted:
                     "flags": list(flags),
                     "elapsed_secs": elapsed,
                     "exam_duration_mins": st.session_state.exam_duration_mins,
+                    "eliminated": {str(k): list(v) for k, v in st.session_state.exam_eliminated.items()},
                 }
             )
         except Exception:
@@ -494,11 +503,12 @@ elif st.session_state.exam_started and not st.session_state.exam_submitted:
                     "flags": list(flags),
                     "elapsed_secs": elapsed_s,
                     "exam_duration_mins": st.session_state.exam_duration_mins,
+                    "eliminated": {str(k): list(v) for k, v in st.session_state.exam_eliminated.items()},
                 }
                 save_session_state(st.session_state.exam_session_id, state_data)
                 
                 # Clear session state keys
-                for k in ["exam_questions", "exam_answers", "exam_started", "exam_submitted", "exam_start_time", "exam_duration_mins", "exam_session_id", "exam_current_idx", "exam_flags", "exam_confirm_submit"]:
+                for k in ["exam_questions", "exam_answers", "exam_started", "exam_submitted", "exam_start_time", "exam_duration_mins", "exam_session_id", "exam_current_idx", "exam_flags", "exam_confirm_submit", "exam_eliminated"]:
                     if k in st.session_state:
                         del st.session_state[k]
                 st.toast("Progress saved!")
@@ -568,11 +578,32 @@ elif st.session_state.exam_started and not st.session_state.exam_submitted:
         current_ans = answers.get(ans_key)
         idx_map = {"A": 0, "B": 1, "C": 2}
 
+        # Strikethrough Option Elimination Toggles
+        eliminated = st.session_state.exam_eliminated.setdefault(curr_idx, set())
+        
+        st.markdown(f"<span style='color:#64748b; font-size:0.82rem; font-weight:600; margin-bottom:0.2rem; display:block;'>{t('prac_eliminate_title')}</span>", unsafe_allow_html=True)
+        elim_cols = st.columns([1.5, 1.5, 1.5, 6.5])
+        for i, opt in enumerate(["A", "B", "C"]):
+            is_elim = opt in eliminated
+            btn_label = f"❌ {opt}" if is_elim else opt
+            with elim_cols[i]:
+                if st.button(btn_label, key=f"mock_elim_{curr_idx}_{opt}", use_container_width=True):
+                    if is_elim:
+                        eliminated.remove(opt)
+                    else:
+                        eliminated.add(opt)
+                    st.session_state.exam_eliminated[curr_idx] = eliminated
+                    st.rerun()
+
         selected = st.radio(
             t("prac_select_opt", idx=curr_idx+1),
             ["A", "B", "C"],
             index=idx_map.get(current_ans) if current_ans in idx_map else None,
-            format_func=lambda x, q=q: f"{x}.  {q[f'option_{x.lower()}']}",
+            format_func=lambda x, q=q, elim=eliminated: (
+                make_strikethrough(f"{x}.  {q[f'option_{x.lower()}']}")
+                if x in elim else
+                f"{x}.  {q[f'option_{x.lower()}']}"
+            ),
             key=f"cbt_mock_radio_{curr_idx}_{st.session_state.exam_session_id}",
             label_visibility="collapsed",
         )
@@ -714,7 +745,7 @@ else:
     col_eb1, col_eb2 = st.columns(2)
     with col_eb1:
         if st.button(t("mock_take_another"), use_container_width=True, type="primary", key="new_exam"):
-            for k in ["exam_questions","exam_answers","exam_started","exam_submitted","exam_start_time","exam_session_id"]:
+            for k in ["exam_questions","exam_answers","exam_started","exam_submitted","exam_start_time","exam_session_id","exam_eliminated"]:
                 st.session_state.pop(k, None)
             st.rerun()
     with col_eb2:

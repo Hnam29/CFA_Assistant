@@ -25,6 +25,9 @@ from utils.sidebar import render_sidebar
 from utils.i18n import t
 from core.question_engine import generate_questions
 
+def make_strikethrough(text: str) -> str:
+    return "".join(char + "\u0336" if char != " " else " " for char in text)
+
 st.set_page_config(page_title="Practice · CFA Assistant", page_icon="🎯", layout="wide")
 
 css = Path(__file__).parent.parent / "assets" / "styles.css"
@@ -63,6 +66,8 @@ if "practice_timer_secs" not in st.session_state:
     st.session_state.practice_timer_secs = 0
 if "practice_radio_versions" not in st.session_state:
     st.session_state.practice_radio_versions = {}
+if "practice_eliminated" not in st.session_state:
+    st.session_state.practice_eliminated = {}
 
 # ── Auto-launch from Scheduler ───────────────────────────────────
 if "schedule_launch" in st.session_state:
@@ -94,6 +99,7 @@ if "schedule_launch" in st.session_state:
                     st.session_state.practice_confirm_submit = False
                     st.session_state.practice_timer_secs = len(questions) * 90
                     st.session_state.practice_radio_versions = {}
+                    st.session_state.practice_eliminated = {}
                     st.rerun()
             except Exception as e:
                 st.error(f"Failed to auto-start scheduled session: {e}")
@@ -196,6 +202,8 @@ if not st.session_state.practice_questions:
                             st.session_state.practice_timer_secs = state.get("practice_timer_secs", total_qs * 90)
                             st.session_state.practice_confirm_submit = False
                             st.session_state.practice_radio_versions = {}
+                            raw_elim = state.get("eliminated", {})
+                            st.session_state.practice_eliminated = {int(k): set(v) for k, v in raw_elim.items()}
                             st.rerun()
                     with row_col_discard:
                         if st.button(t("prac_discard"), key=f"prac_discard_{ps['id']}", use_container_width=True):
@@ -299,6 +307,7 @@ if not st.session_state.practice_questions:
                             st.session_state.practice_confirm_submit = False
                             st.session_state.practice_timer_secs = len(questions) * 90
                             st.session_state.practice_radio_versions = {}
+                            st.session_state.practice_eliminated = {}
                             st.rerun()
                         else:
                             st.error("Failed to generate questions. Check if your question bank has questions for this topic.")
@@ -518,6 +527,7 @@ elif not st.session_state.practice_submitted:
                     "flags": list(flags),
                     "elapsed_secs": elapsed_secs,
                     "practice_timer_secs": timer_total,
+                    "eliminated": {str(k): list(v) for k, v in st.session_state.practice_eliminated.items()},
                 }
             )
         except Exception:
@@ -620,11 +630,12 @@ elif not st.session_state.practice_submitted:
                     "flags": list(flags),
                     "elapsed_secs": elapsed_s,
                     "practice_timer_secs": timer_total,
+                    "eliminated": {str(k): list(v) for k, v in st.session_state.practice_eliminated.items()},
                 }
                 save_session_state(st.session_state.practice_session_id, state_data)
                 
                 # Clear session state keys
-                for k in ["practice_questions", "practice_answers", "practice_submitted", "practice_session_id", "practice_start_time", "practice_current_idx", "practice_flags", "practice_timer_secs", "practice_radio_versions"]:
+                for k in ["practice_questions", "practice_answers", "practice_submitted", "practice_session_id", "practice_start_time", "practice_current_idx", "practice_flags", "practice_timer_secs", "practice_radio_versions", "practice_eliminated"]:
                     if k in st.session_state:
                         del st.session_state[k]
                 st.toast("Progress saved!")
@@ -693,11 +704,32 @@ elif not st.session_state.practice_submitted:
         idx_map = {"A": 0, "B": 1, "C": 2}
         radio_ver = st.session_state.practice_radio_versions.get(curr_idx, 0)
 
+        # Strikethrough Option Elimination Toggles
+        eliminated = st.session_state.practice_eliminated.setdefault(curr_idx, set())
+        
+        st.markdown(f"<span style='color:#64748b; font-size:0.82rem; font-weight:600; margin-bottom:0.2rem; display:block;'>{t('prac_eliminate_title')}</span>", unsafe_allow_html=True)
+        elim_cols = st.columns([1.5, 1.5, 1.5, 6.5])
+        for i, opt in enumerate(["A", "B", "C"]):
+            is_elim = opt in eliminated
+            btn_label = f"❌ {opt}" if is_elim else opt
+            with elim_cols[i]:
+                if st.button(btn_label, key=f"prac_elim_{curr_idx}_{opt}", use_container_width=True, disabled=is_answered):
+                    if is_elim:
+                        eliminated.remove(opt)
+                    else:
+                        eliminated.add(opt)
+                    st.session_state.practice_eliminated[curr_idx] = eliminated
+                    st.rerun()
+
         selected = st.radio(
             t("prac_select_opt", idx=curr_idx+1),
             ["A", "B", "C"],
             index=idx_map[user_choice] if user_choice in idx_map else None,
-            format_func=lambda x, q=q: f"{x}.  {q[f'option_{x.lower()}']}",
+            format_func=lambda x, q=q, elim=eliminated: (
+                make_strikethrough(f"{x}.  {q[f'option_{x.lower()}']}")
+                if x in elim else
+                f"{x}.  {q[f'option_{x.lower()}']}"
+            ),
             key=f"cbt_radio_{curr_idx}_v{radio_ver}",
             label_visibility="collapsed",
             disabled=is_answered,
@@ -839,6 +871,7 @@ else:
             st.session_state.practice_questions = []
             st.session_state.practice_answers = {}
             st.session_state.practice_submitted = False
+            st.session_state.practice_eliminated = {}
             st.rerun()
     with col_r2:
         if st.button(t("prac_ask_ai"), use_container_width=True, key="go_chat"):
