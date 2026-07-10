@@ -210,70 +210,69 @@ except Exception:
     pending_sessions = []
 
 if pending_sessions:
-    st.markdown(
-        f"""<div class="cfa-card" style="border-color:#3b82f6; background:rgba(59,130,246,0.05); margin-bottom:1.5rem; padding: 1.2rem;">
-            <h4 style="color:#60a5fa; margin:0 0 0.5rem 0;">{t('dash_saved_sessions')}</h4>
-            <p style="color:#94a3b8; font-size:0.85rem; margin:0 0 1rem 0;">
+    with st.expander(f"{t('dash_saved_sessions')} ({len(pending_sessions)})", expanded=False):
+        st.markdown(
+            f"""<p style="color:#94a3b8; font-size:0.85rem; margin:0.5rem 0 1rem 0;">
                 {t('dash_saved_subtext')}
-            </p>
-        </div>""",
-        unsafe_allow_html=True
-    )
-    for ps in pending_sessions:
-        ps_id = ps["id"]
-        ps_topic = ps["topic"]
-        ps_type = ps["session_type"]
-        started_time = format_datetime_str(ps["started_at"])
+            </p>""",
+            unsafe_allow_html=True
+        )
+        for ps in pending_sessions:
+            ps_id = ps["id"]
+            ps_topic = ps["topic"]
+            ps_type = ps["session_type"]
+            started_time = format_datetime_str(ps["started_at"])
 
-        display_type = t("dash_practice") if ps_type.lower() in ("practice", "mixed") else t("dash_mock_exam")
+            display_type = t("dash_practice") if ps_type.lower() in ("practice", "mixed") else t("dash_mock_exam")
 
-        col_ps_info, col_ps_actions = st.columns([7.5, 2.5])
-        with col_ps_info:
-            st.markdown(
-                f"""<div style="font-size:0.95rem; color:#f1f5f9; padding-top: 0.3rem;">
-                    <strong>{display_type}</strong> — {t('dash_topic')} <span style="color:#60a5fa; font-weight: 600;">{ps_topic}</span>
-                    <span style="font-size:0.8rem; color:#64748b;">{t('dash_started', time=started_time)}</span>
-                </div>""",
-                unsafe_allow_html=True
-            )
-        with col_ps_actions:
-            act_col1, act_col2 = st.columns(2)
-            with act_col1:
-                if st.button(t("prac_resume"), key=f"resume_{ps_id}", use_container_width=True, type="primary"):
-                    state = ps["state"]
-                    if ps_type.lower() in ("practice", "mixed"):
-                        st.session_state.practice_questions = state["questions"]
-                        st.session_state.practice_answers = state["answers"]
-                        st.session_state.practice_submitted = False
-                        st.session_state.practice_session_id = ps_id
-                        st.session_state.practice_start_time = time.time() - state.get("elapsed_secs", 0)
-                        st.session_state.practice_current_idx = state.get("current_idx", 0)
-                        st.session_state.practice_flags = set(state.get("flags", []))
-                        st.session_state.practice_timer_secs = state.get("practice_timer_secs", len(state["questions"]) * 90)
-                        st.session_state.practice_confirm_submit = False
-                        st.session_state.practice_radio_versions = {}
-                        st.switch_page("pages/2_Practice.py")
-                    else:
-                        st.session_state.exam_questions = state["questions"]
-                        st.session_state.exam_answers = state["answers"]
-                        st.session_state.exam_started = True
-                        st.session_state.exam_submitted = False
-                        st.session_state.exam_session_id = ps_id
-                        st.session_state.exam_start_time = time.time() - state.get("elapsed_secs", 0)
-                        st.session_state.exam_current_idx = state.get("current_idx", 0)
-                        st.session_state.exam_flags = set(state.get("flags", []))
-                        st.session_state.exam_duration_mins = state.get("exam_duration_mins", 30)
-                        st.session_state.exam_confirm_submit = False
-                        st.switch_page("pages/3_Mock_Exam.py")
-            with act_col2:
-                if st.button(t("prac_discard"), key=f"discard_{ps_id}", use_container_width=True):
-                    try:
-                        discard_session(ps_id)
-                    except Exception:
-                        pass
-                    st.toast(t("session_discarded") if t("session_discarded") != "session_discarded" else "Session discarded.")
-                    st.rerun()
-    st.markdown("<hr style='border-color:#334155; margin: 1.5rem 0;'>", unsafe_allow_html=True)
+            col_ps_info, col_ps_actions = st.columns([7.5, 2.5])
+            with col_ps_info:
+                st.markdown(
+                    f"""<div style="font-size:0.95rem; color:#f1f5f9; padding-top: 0.3rem;">
+                        <strong>{display_type}</strong> — {t('dash_topic')} <span style="color:#60a5fa; font-weight: 600;">{ps_topic}</span>
+                        <span style="font-size:0.8rem; color:#64748b;">{t('dash_started', time=started_time)}</span>
+                    </div>""",
+                    unsafe_allow_html=True
+                )
+            with col_ps_actions:
+                act_col1, act_col2 = st.columns(2)
+                with act_col1:
+                    if st.button(t("prac_resume"), key=f"resume_{ps_id}", use_container_width=True, type="primary"):
+                        state = ps["state"]
+                        if ps_type.lower() in ("practice", "mixed"):
+                            st.session_state.practice_questions = state["questions"]
+                            st.session_state.practice_answers = state["answers"]
+                            st.session_state.practice_submitted = False
+                            st.session_state.practice_session_id = ps_id
+                            st.session_state.practice_start_time = time.time() - state.get("elapsed_secs", 0)
+                            st.session_state.practice_current_idx = state.get("current_idx", 0)
+                            st.session_state.practice_flags = set(state.get("flags", []))
+                            st.session_state.practice_timer_secs = state.get("practice_timer_secs", len(state["questions"]) * 90)
+                            st.session_state.practice_confirm_submit = False
+                            st.session_state.practice_radio_versions = {}
+                            st.switch_page("pages/2_Practice.py")
+                        else:
+                            st.session_state.exam_questions = state["questions"]
+                            st.session_state.exam_answers = state["answers"]
+                            st.session_state.exam_started = True
+                            st.session_state.exam_submitted = False
+                            st.session_state.exam_session_id = ps_id
+                            st.session_state.exam_start_time = time.time() - state.get("elapsed_secs", 0)
+                            st.session_state.exam_current_idx = state.get("current_idx", 0)
+                            st.session_state.exam_flags = set(state.get("flags", []))
+                            st.session_state.exam_duration_mins = state.get("exam_duration_mins", 30)
+                            st.session_state.exam_confirm_submit = False
+                            st.switch_page("pages/3_Mock_Exam.py")
+                with act_col2:
+                    if st.button(t("prac_discard"), key=f"discard_{ps_id}", use_container_width=True):
+                        try:
+                            discard_session(ps_id)
+                        except Exception:
+                            pass
+                        st.toast(t("session_discarded") if t("session_discarded") != "session_discarded" else "Session discarded.")
+                        st.rerun()
+            st.markdown("<div style='margin-bottom:0.6rem; border-bottom: 1px solid #334155;'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='margin-bottom:1.5rem;'></div>", unsafe_allow_html=True)
 
 # ── KPI row ───────────────────────────────────────────────────────
 total_sessions = len([s for s in sessions if s["completed"]])

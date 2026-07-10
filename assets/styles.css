@@ -451,3 +451,47 @@ button[key="logo_btn_home"]:hover {
 .stApp:has(.landing-page-indicator) [data-testid="collapsedControl"] {
     display: none !important;
 }
+
+/* ── Expanders ────────────────────────────────────────────────── */
+.stExpander {
+    background: var(--bg-card) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius-lg) !important;
+    margin-bottom: 1.5rem !important;
+    overflow: hidden !important;
+    box-shadow: none !important;
+}
+
+.stExpander:hover {
+    border-color: var(--border-hover) !important;
+}
+
+.stExpander details {
+    border: none !important;
+}
+
+.stExpander summary {
+    background: rgba(59, 130, 246, 0.04) !important;
+    padding: 0.8rem 1.2rem !important;
+    border-bottom: none !important;
+    transition: background var(--transition) !important;
+}
+
+.stExpander summary:hover {
+    background: rgba(59, 130, 246, 0.08) !important;
+}
+
+.stExpander summary span {
+    font-weight: 700 !important;
+    color: #60a5fa !important;
+    font-size: 1rem !important;
+}
+
+.stExpander details[open] summary {
+    border-bottom: 1px solid var(--border) !important;
+}
+
+.stExpander details[open] > div {
+    padding: 1.2rem !important;
+}
+
